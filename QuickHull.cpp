@@ -167,8 +167,7 @@ namespace quickhull {
 				continue;
 			}
 
-			// We no longer other half edges of the visible faces other than the horizon edges. So we mark them as disabled so that the data slots can be reused. We could now also disabled vertices belonging to disabled half edges, but we do not, for their
-			// memory consumption is minimal.
+			// We no longer half edges of the visible faces other than the horizon edges. So we mark them as disabled so that the data slots can be reused.
 			for (auto faceIndex : visibleFaces) {
 				auto& disabledFace = m_mesh.m_faces[faceIndex];
 				auto halfEdges = m_mesh.getHalfEdgeIndicesOfFace(disabledFace);
