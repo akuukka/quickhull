@@ -145,9 +145,9 @@ namespace quickhull {
 				pvf.m_isVisibleFaceOnCurrentIteration = 0;
 				horizonEdges.push_back(faceData.m_enteredFromHalfEdge);
 				// Store which half edge is the horizon edge. The other half edges of the face will not be part of the final mesh so their data slots can by recycled.
-				int ind = -1;
+				std::int8_t ind = -1;
 				auto halfEdges = m_mesh.getHalfEdgeIndicesOfFace(m_mesh.m_faces[m_mesh.m_halfEdges[faceData.m_enteredFromHalfEdge].m_face]);
-				for (size_t k=0;k<3;k++) {
+				for (std::int8_t k=0;k<3;k++) {
 					if (halfEdges[k] == faceData.m_enteredFromHalfEdge) {
 						ind = k;
 						break;
@@ -216,7 +216,7 @@ namespace quickhull {
 
 				auto& newFace = m_mesh.m_faces[newFaceIndex];
 
-				const Vector3<T> planeNormal = (pointCloud[A]-activePoint).crossProduct(pointCloud[B]-activePoint).getNormalized();
+				const Vector3<T> planeNormal = mathutils::getTriangleUnitNormal(pointCloud[A],pointCloud[B],activePoint);
 				newFace.m_P = Plane<T>(planeNormal,activePoint);
 				newFace.m_he = AB;
 
