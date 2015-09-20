@@ -12,6 +12,7 @@
 #include "Structs/HalfEdgeMesh.hpp"
 #include <vector>
 #include <map>
+#include <fstream>
 
 namespace quickhull {
 
@@ -85,6 +86,23 @@ namespace quickhull {
 
 		std::vector<Vector3<T>>& getVertexBuffer() {
 			return m_vertices;
+		}
+		
+		// Export the mesh to a Waveform OBJ file
+		void writeWaveformOBJ(const std::string& filename)
+		{
+			std::ofstream objFile;
+			objFile.open (filename);
+			objFile << "o quickhull\n";
+			for (const auto& v : getVertexBuffer()) {
+				objFile << "v " << v.x << " " << v.y << " " << v.z << "\n";
+			}
+			const auto& indBuf = getIndexBuffer();
+			size_t triangleCount = indBuf.size()/3;
+			for (int i=0;i<triangleCount;i++) {
+				objFile << "f " << indBuf[i*3]+1 << " " << indBuf[i*3+1]+1 << " " << indBuf[i*3+2]+1 << "\n";
+			}
+			objFile.close();
 		}
 
 	};
