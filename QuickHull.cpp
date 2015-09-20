@@ -46,7 +46,6 @@ namespace quickhull {
 		for (auto& f : degenerateCaseCheckers) {
 			auto degenerateHull = f();
 			if (degenerateHull.getVertexBuffer().size()) {
-				//assert(false);
 				return degenerateHull;
 			}
 		}
@@ -159,7 +158,6 @@ namespace quickhull {
 			const size_t horizonEdgeCount = horizonEdges.size();
 
 			// Order horizon edges so that they form a loop. This may fail due to numerical instability in which case we give up trying to solve horizon edge for this point and accept a minor degeneration in the convex hull.
-			// At the same time we mark those visible faces that have horizon edges. Those that do not, can have their associated half edges removed.
 			if (!reorderHorizonEdges(horizonEdges)) {
 				std::cerr << "Failed to solve horizon edge." << std::endl;
 				auto it = std::find(tf.m_pointsOnPositiveSide.begin(),tf.m_pointsOnPositiveSide.end(),activePointIndex);
@@ -167,26 +165,38 @@ namespace quickhull {
 				continue;
 			}
 
-			// We no longer half edges of the visible faces other than the horizon edges. So we mark them as disabled so that the data slots can be reused.
+			// Except for the horizon edges, all half edges of the visible faces can be marked disabled. Their data slots will be reused.
+			m_newFaceIndices.clear();
+			m_newHalfEdgeIndices.clear();
+			size_t disableCounter = 0;
 			for (auto faceIndex : visibleFaces) {
 				auto& disabledFace = m_mesh.m_faces[faceIndex];
 				auto halfEdges = m_mesh.getHalfEdgeIndicesOfFace(disabledFace);
 				for (size_t j=0;j<3;j++) {
 					if ((disabledFace.m_horizonEdgesOnCurrentIteration & (1<<j)) == 0) {
-						m_mesh.disableHalfEdge(halfEdges[j]);
+						if (disableCounter < horizonEdgeCount*2) {
+							// Use on this iteration
+							m_newHalfEdgeIndices.push_back(m_mesh.addHalfEdge());
+							disableCounter++;
+						}
+						else {
+							// Mark for reusal on later iteration step
+							m_mesh.disableHalfEdge(halfEdges[j]);
+						}
 					}
 				}
 			}
-
-			// Reserve indices for new faces and half edges
-			m_newFaceIndices.clear();
-			m_newHalfEdgeIndices.clear();
 			for (size_t i=0;i<horizonEdgeCount;i++) {
 				m_newFaceIndices.push_back(m_mesh.addFace());
-				m_newHalfEdgeIndices.push_back(m_mesh.addHalfEdge());
-				m_newHalfEdgeIndices.push_back(m_mesh.addHalfEdge());
 			}
-
+			if (disableCounter < horizonEdgeCount*2) {
+				const size_t newHalfEdgesNeeded = horizonEdgeCount*2-disableCounter;
+				for (size_t i=0;i<newHalfEdgesNeeded;i++) {
+					m_newHalfEdgeIndices.push_back(m_mesh.addHalfEdge());
+				}
+				
+			}
+			
 			// Create new faces using the edgeloop
 			for (size_t i = 0; i < horizonEdgeCount; i++) {
 				const IndexType AB = horizonEdges[i];
@@ -232,7 +242,7 @@ namespace quickhull {
 					if (point == activePointIndex) {
 						continue;
 					}
-					for (size_t j=0;j<m_newFaceIndices.size();j++) {
+					for (size_t j=0;j<horizonEdgeCount;j++) {
 						auto& newFace = m_mesh.m_faces[m_newFaceIndices[j]];
 						const T D = mathutils::getSignedDistanceToPlane(pointCloud[ point ],newFace.m_P);
 						if (D>m_epsilon) {
