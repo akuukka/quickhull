@@ -27,25 +27,8 @@ namespace quickhull {
 			return false;
 		}
 
-		void setNormal(const Vector3<T>& N) {
-			m_N = N.getNormalized();
-		}
-
-		const Vector3<T>& getNormal() const {
-			return m_N;
-		}
-		
-		T getSignedDistance() const {
-			return m_D;
-		}
-
 		Plane() {
 
-		}
-
-		// Construct a plane with unit normal N and signed distance D to the origin
-		Plane(const Vector3<T>& N, T D) : m_N(N), m_D(D) {
-			
 		}
 
 		// Construct a plane from unit normal N and any point P on the plane
