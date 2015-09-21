@@ -98,7 +98,8 @@ namespace quickhull {
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
 
-			if (!tf.m_pointsOnPositiveSide || tf.m_pointsOnPositiveSide->size()==0 || tf.isDisabled()) {
+			assert(!tf.m_pointsOnPositiveSide || tf.m_pointsOnPositiveSide->size()>0);
+			if (!tf.m_pointsOnPositiveSide || tf.isDisabled()) {
 				continue;
 			}
 			
