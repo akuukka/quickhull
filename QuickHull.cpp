@@ -237,9 +237,8 @@ namespace quickhull {
 				m_mesh.m_halfEdges[BC].m_opp = m_newHalfEdgeIndices[((i+1)*2) % (horizonEdgeCount*2)];
 			}
 
-			// Disable the faces and assign points that were visible from them to the new faces.
-			for (size_t i =0;i<visibleFaceCount;i++) {
-				auto& disabledPoints = m_disabledFacePointVectors[i];
+			// Assign points that were on the positive side of the disabled faces to the new faces.
+			for (auto& disabledPoints : m_disabledFacePointVectors) {
 				if (!disabledPoints)
 					continue;
 				for (const auto& point : *(disabledPoints)) {
