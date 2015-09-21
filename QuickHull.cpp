@@ -156,7 +156,6 @@ namespace quickhull {
 				m_mesh.m_faces[m_mesh.m_halfEdges[faceData.m_enteredFromHalfEdge].m_face].m_horizonEdgesOnCurrentIteration |= (1<<ind);
 			}
 			const size_t horizonEdgeCount = horizonEdges.size();
-			const size_t visibleFaceCount = visibleFaces.size();
 
 			// Order horizon edges so that they form a loop. This may fail due to numerical instability in which case we give up trying to solve horizon edge for this point and accept a minor degeneration in the convex hull.
 			if (!reorderHorizonEdges(horizonEdges)) {
@@ -180,7 +179,7 @@ namespace quickhull {
 					if ((disabledFace.m_horizonEdgesOnCurrentIteration & (1<<j)) == 0) {
 						if (disableCounter < horizonEdgeCount*2) {
 							// Use on this iteration
-							m_newHalfEdgeIndices.push_back(m_mesh.addHalfEdge());
+							m_newHalfEdgeIndices.push_back(halfEdges[j]);
 							disableCounter++;
 						}
 						else {
