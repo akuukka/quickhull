@@ -11,7 +11,7 @@
 #include "Structs/Vector3.hpp"
 #include "Structs/HalfEdgeMesh.hpp"
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <fstream>
 
 namespace quickhull {
@@ -27,17 +27,19 @@ namespace quickhull {
 		ConvexHull(const Mesh<T>& mesh, const std::vector<Vector3<T>>& pointCloud, bool CCW) {
 			std::vector<bool> faceProcessed(mesh.m_faces.size(),false);
 			std::vector<size_t> faceStack;
-			std::map<size_t,size_t> vertexIndexMapping; // Map vertex indices from original point cloud to the new mesh vertex indices
+			std::unordered_map<size_t,size_t> vertexIndexMapping; // Map vertex indices from original point cloud to the new mesh vertex indices
 			for (size_t i = 0;i<mesh.m_faces.size();i++) {
 				if (!mesh.m_faces[i].isDisabled()) {
 					faceStack.push_back(i);
 					break;
 				}
 			}
-
 			if (faceStack.size()==0) {
 				return;
 			}
+			
+			const size_t finalMeshFaceCount = mesh.m_faces.size() - mesh.m_disabledFaces.size();
+			m_indices.reserve(finalMeshFaceCount*3);
 
 			while (faceStack.size()) {
 				auto it = faceStack.end()-1;
