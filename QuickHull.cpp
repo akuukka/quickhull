@@ -167,7 +167,7 @@ namespace quickhull {
 
 			// Except for the horizon edges, all half edges of the visible faces can be marked disabled. Their data slots will be reused.
 			// The faces will be disabled as well, but we need to remember the points that were on the positive side of them, therefore
-			// we save pointes to them.
+			// we save pointers to them.
 			m_newFaceIndices.clear();
 			m_newHalfEdgeIndices.clear();
 			m_disabledFacePointVectors.clear();
