@@ -186,9 +186,6 @@ namespace quickhull {
 					}
 				}
 			}
-			for (size_t i=0;i<horizonEdgeCount;i++) {
-				m_newFaceIndices.push_back(m_mesh.addFace());
-			}
 			if (disableCounter < horizonEdgeCount*2) {
 				const size_t newHalfEdgesNeeded = horizonEdgeCount*2-disableCounter;
 				for (size_t i=0;i<newHalfEdgesNeeded;i++) {
@@ -207,7 +204,8 @@ namespace quickhull {
 				B = horizonEdgeVertexIndices[1];
 				C = activePointIndex;
 
-				const IndexType newFaceIndex = m_newFaceIndices[i];
+				const IndexType newFaceIndex = m_mesh.addFace();
+				m_newFaceIndices.push_back(newFaceIndex);
 
 				const IndexType CA = m_newHalfEdgeIndices[2*i+0];
 				const IndexType BC = m_newHalfEdgeIndices[2*i+1];
