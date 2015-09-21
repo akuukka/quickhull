@@ -76,7 +76,7 @@ namespace quickhull {
 		std::vector<IndexType> faceStack;
 		for (size_t i=0;i < 4;i++) {
 			auto& f = m_mesh.m_faces[i];
-			if (f.m_pointsOnPositiveSide.size()>0) {
+			if (f.m_pointsOnPositiveSide && f.m_pointsOnPositiveSide->size()>0) {
 				faceStack.push_back(i);
 				f.m_inFaceStack = 1;
 			}
@@ -98,7 +98,7 @@ namespace quickhull {
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
 
-			if (tf.m_pointsOnPositiveSide.size()==0 || tf.isDisabled()) {
+			if (!tf.m_pointsOnPositiveSide || tf.m_pointsOnPositiveSide->size()==0 || tf.isDisabled()) {
 				continue;
 			}
 			
@@ -156,18 +156,22 @@ namespace quickhull {
 				m_mesh.m_faces[m_mesh.m_halfEdges[faceData.m_enteredFromHalfEdge].m_face].m_horizonEdgesOnCurrentIteration |= (1<<ind);
 			}
 			const size_t horizonEdgeCount = horizonEdges.size();
+			const size_t visibleFaceCount = visibleFaces.size();
 
 			// Order horizon edges so that they form a loop. This may fail due to numerical instability in which case we give up trying to solve horizon edge for this point and accept a minor degeneration in the convex hull.
 			if (!reorderHorizonEdges(horizonEdges)) {
 				std::cerr << "Failed to solve horizon edge." << std::endl;
-				auto it = std::find(tf.m_pointsOnPositiveSide.begin(),tf.m_pointsOnPositiveSide.end(),activePointIndex);
-				tf.m_pointsOnPositiveSide.erase(it);
+				auto it = std::find(tf.m_pointsOnPositiveSide->begin(),tf.m_pointsOnPositiveSide->end(),activePointIndex);
+				tf.m_pointsOnPositiveSide->erase(it);
 				continue;
 			}
 
 			// Except for the horizon edges, all half edges of the visible faces can be marked disabled. Their data slots will be reused.
+			// The faces will be disabled as well, but we need to remember the points that were on the positive side of them, therefore
+			// we save pointes to them.
 			m_newFaceIndices.clear();
 			m_newHalfEdgeIndices.clear();
+			m_disabledFacePointVectors.clear();
 			size_t disableCounter = 0;
 			for (auto faceIndex : visibleFaces) {
 				auto& disabledFace = m_mesh.m_faces[faceIndex];
@@ -185,13 +189,15 @@ namespace quickhull {
 						}
 					}
 				}
+				// Disabled the face, but retain pointer to the points that were on the positive side of it. We need to assign those points
+				// to the new faces we create shortly.
+				m_disabledFacePointVectors.push_back(std::move(m_mesh.disableFace(faceIndex)));
 			}
 			if (disableCounter < horizonEdgeCount*2) {
 				const size_t newHalfEdgesNeeded = horizonEdgeCount*2-disableCounter;
 				for (size_t i=0;i<newHalfEdgesNeeded;i++) {
 					m_newHalfEdgeIndices.push_back(m_mesh.addHalfEdge());
 				}
-				
 			}
 			
 			// Create new faces using the edgeloop
@@ -232,11 +238,11 @@ namespace quickhull {
 			}
 
 			// Disable the faces and assign points that were visible from them to the new faces.
-			for (auto faceIndex : visibleFaces) {
-				auto& disabledFace = m_mesh.m_faces[faceIndex];
-
-				m_mesh.disableFace(faceIndex);
-				for (const auto& point : disabledFace.m_pointsOnPositiveSide) {
+			for (size_t i =0;i<visibleFaceCount;i++) {
+				auto& disabledPoints = m_disabledFacePointVectors[i];
+				if (!disabledPoints)
+					continue;
+				for (const auto& point : *(disabledPoints)) {
 					if (point == activePointIndex) {
 						continue;
 					}
@@ -244,7 +250,10 @@ namespace quickhull {
 						auto& newFace = m_mesh.m_faces[m_newFaceIndices[j]];
 						const T D = mathutils::getSignedDistanceToPlane(pointCloud[ point ],newFace.m_P);
 						if (D>m_epsilon) {
-							newFace.m_pointsOnPositiveSide.push_back( point );
+							if (!newFace.m_pointsOnPositiveSide) {
+								newFace.m_pointsOnPositiveSide = std::move(m_mesh.getIndexVectorFromPool());
+							}
+							newFace.m_pointsOnPositiveSide->push_back( point );
 							if (D > newFace.m_mostDistantPointDist) {
 								newFace.m_mostDistantPointDist = D;
 								newFace.m_mostDistantPoint = point;
@@ -253,12 +262,14 @@ namespace quickhull {
 						}
 					}
 				}
+				// The points are no longer needed: we can move them to the vector pool for reuse.
+				m_mesh.reclaimToIndexVectorPool(std::move(disabledPoints));
 			}
 
 			// Increase face stack size if needed
 			for (auto newFaceIndex : m_newFaceIndices) {
 				auto& newFace = m_mesh.m_faces[newFaceIndex];
-				if (newFace.m_pointsOnPositiveSide.size()) {
+				if (newFace.m_pointsOnPositiveSide && newFace.m_pointsOnPositiveSide->size()) {
 					if (!newFace.m_inFaceStack) {
 						faceStack.push_back(newFaceIndex);
 						newFace.m_inFaceStack = 1;
@@ -266,6 +277,7 @@ namespace quickhull {
 				}
 			}
 		}
+		
 	}
 	
 	/*
@@ -575,7 +587,10 @@ namespace quickhull {
 			for (auto& face : mesh.m_faces) {
 				const T D = mathutils::getSignedDistanceToPlane(vertices[i],face.m_P);
 				if (D>m_epsilon) {
-					face.m_pointsOnPositiveSide.push_back(i);
+					if (!face.m_pointsOnPositiveSide) {
+						face.m_pointsOnPositiveSide.reset(new std::vector<IndexType>());
+					}
+					face.m_pointsOnPositiveSide->push_back(i);
 					if (D > face.m_mostDistantPointDist) {
 						face.m_mostDistantPointDist = D;
 						face.m_mostDistantPoint = i;

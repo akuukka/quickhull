@@ -16,6 +16,7 @@
 #include <array>
 #include <cassert>
 #include <limits>
+#include <memory>
 
 namespace quickhull {
 
@@ -32,13 +33,13 @@ namespace quickhull {
 		struct Face {
 			IndexType m_he;
 			Plane<T> m_P;
-			std::vector<IndexType> m_pointsOnPositiveSide;
 			T m_mostDistantPointDist;
 			IndexType m_mostDistantPoint;
 			size_t m_visibilityCheckedOnIteration;
 			std::uint8_t m_isVisibleFaceOnCurrentIteration : 1;
 			std::uint8_t m_inFaceStack : 1;
 			std::uint8_t m_horizonEdgesOnCurrentIteration : 3; // Bit for each half edge assigned to this face, each being 0 or 1 depending on whether the edge belong to horizon edge
+			std::unique_ptr<std::vector<IndexType>> m_pointsOnPositiveSide;
 
 			Face() : m_he(std::numeric_limits<IndexType>::max()),
 					 m_mostDistantPointDist(0),
@@ -60,9 +61,40 @@ namespace quickhull {
 			}
 		};
 
+		// Mesh data
 		std::vector<Face> m_faces;
 		std::vector<HalfEdge> m_halfEdges;
+		
+		// When the mesh is modified and faces and half edges are removed from it, we do not actually remove them from the container vectors.
+		// Insted, they are mark as disabled which means that the indices can be reused when we need to add new faces and half edges to the mesh.
+		// We store the free indices in the following vectors.
 		std::vector<IndexType> m_disabledFaces,m_disabledHalfEdges;
+		
+		// Each face contains a unique pointer to a vector of indices. However, many - often most - faces do not have any points on the positive
+		// side of them especially at the the end of the iteration. When a face is removed from the mesh, its associated point vector, if such
+		// exists, is moved to the index vector pool, and when we need to add new faces with points on the positive side to the mesh,
+		// we reuse these vectors. This reduces the amount of std::vectors we have to deal with, and impact on performance is remarkable.
+		std::vector<std::unique_ptr<std::vector<IndexType>>> m_indexVectorPool;
+		
+		std::unique_ptr<std::vector<IndexType>> getIndexVectorFromPool() {
+			if (m_indexVectorPool.size()==0) {
+				return std::unique_ptr<std::vector<IndexType>>(new std::vector<IndexType>());
+			}
+			auto it = m_indexVectorPool.end()-1;
+			std::unique_ptr<std::vector<IndexType>> r = std::move(*it);
+			m_indexVectorPool.erase(it);
+			r->clear();
+			return r;
+		}
+		
+		void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>> ptr) {
+			const size_t oldSize = ptr->size();
+			if ((oldSize+1)*128 < ptr->capacity()) {
+				// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
+				return;
+			}
+			m_indexVectorPool.push_back(std::move(ptr));
+		}
 
 		IndexType addFace() {
 			if (m_disabledFaces.size()) {
@@ -70,19 +102,12 @@ namespace quickhull {
 				IndexType index = *it;
 				auto& f = m_faces[index];
 				assert(f.isDisabled());
-				if ((f.m_pointsOnPositiveSide.size()+1)*256 < f.m_pointsOnPositiveSide.capacity()) {
-					// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Since we recycle the face objects, vector buffers should be reset when they are clearly too large.
-					// There is performance penalty, naturally, so we don't want to do this too often.
-					f.m_pointsOnPositiveSide = std::vector<IndexType>();
-				}
-				else {
-					f.m_pointsOnPositiveSide.clear();
-				}
+				assert(!f.m_pointsOnPositiveSide);
 				f.m_mostDistantPointDist = 0;
 				m_disabledFaces.erase(it);
 				return index;
 			}
-			m_faces.push_back(Face());
+			m_faces.emplace_back();
 			return m_faces.size()-1;
 		}
 
@@ -97,9 +122,12 @@ namespace quickhull {
 			return m_halfEdges.size()-1;
 		}
 
-		void disableFace(IndexType faceIndex) {
-			m_faces[faceIndex].disable();
+		// Mark a face as disabled and return a pointer to the points that were on the positive of it.
+		std::unique_ptr<std::vector<IndexType>> disableFace(IndexType faceIndex) {
+			auto& f = m_faces[faceIndex];
+			f.disable();
 			m_disabledFaces.push_back(faceIndex);
+			return std::move(f.m_pointsOnPositiveSide);
 		}
 
 		void disableHalfEdge(IndexType heIndex) {
@@ -198,19 +226,19 @@ namespace quickhull {
 			// Create faces
 			Face ABC;
 			ABC.m_he = 0;
-			m_faces.push_back(ABC);
+			m_faces.push_back(std::move(ABC));
 
 			Face ACD;
 			ACD.m_he = 3;
-			m_faces.push_back(ACD);
+			m_faces.push_back(std::move(ACD));
 
 			Face BAD;
 			BAD.m_he = 6;
-			m_faces.push_back(BAD);
+			m_faces.push_back(std::move(BAD));
 
 			Face CBD;
 			CBD.m_he = 9;
-			m_faces.push_back(CBD);
+			m_faces.push_back(std::move(CBD));
 		}
 
 		std::array<IndexType,3> getVertexIndicesOfFace(const Face& f) const {

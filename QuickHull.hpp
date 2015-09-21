@@ -16,6 +16,7 @@
 #include "Structs/HalfEdgeMesh.hpp"
 #include "ConvexHull.hpp"
 
+
 /*
  * Implementation of the 3D QuickHull algorithm by Antti Kuukka
  *
@@ -68,6 +69,7 @@ namespace quickhull {
 		// Temporary variables used during iteration process
 		std::vector<IndexType> m_newFaceIndices;
 		std::vector<IndexType> m_newHalfEdgeIndices;
+		std::vector< std::unique_ptr<std::vector<IndexType>> > m_disabledFacePointVectors;
 
 		// Detect degenerate cases
 		ConvexHull<T> checkDegenerateCase0D();
