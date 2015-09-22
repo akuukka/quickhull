@@ -532,9 +532,9 @@ namespace quickhull {
 			}
 		}
 		assert(maxD > 0.0);
-
+		
 		// Find the most distant point to the line between the two chosen extreme points.
-		Ray<T> r(vertices[selectedPoints.first], (vertices[selectedPoints.second] - vertices[selectedPoints.first]).getNormalized());
+		Ray<T> r(vertices[selectedPoints.first], (vertices[selectedPoints.second] - vertices[selectedPoints.first]));
 		maxD=0.0f;
 		IndexType maxI=std::numeric_limits<IndexType>::max();
 		const size_t vCount = vertices.size();
@@ -545,6 +545,7 @@ namespace quickhull {
 				maxI=(IndexType)i;
 			}
 		}
+		
 		assert(maxI!=std::numeric_limits<IndexType>::max());
 
 		// These three points form the base triangle for our tetrahedron.
@@ -600,7 +601,6 @@ namespace quickhull {
 				}
 			}
 		}
-
 		return mesh;
 	}
 	
@@ -610,6 +610,5 @@ namespace quickhull {
 
 	template class QuickHull<float>;
 	template class QuickHull<double>;
-
 }
 
