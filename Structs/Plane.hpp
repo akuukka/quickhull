@@ -18,8 +18,11 @@ namespace quickhull {
 		// Unit normal of the plane
 		Vector3<T> m_N;
 		
-		// Signed distance to the origin from the plane
+		// Signed distance (if normal is of length 1) to the plane from origin
 		T m_D;
+		
+		// Normal length squared
+		T m_sqrNLength;
 
 		bool isPointOnPositiveSide(const Vector3<T>& Q) const {
 			T d = m_N.dotProduct(Q)+m_D;
@@ -28,11 +31,10 @@ namespace quickhull {
 		}
 
 		Plane() {
-
 		}
 
-		// Construct a plane from unit normal N and any point P on the plane
-		Plane(const Vector3<T>& N, const Vector3<T>& P) : m_N(N), m_D(-N.dotProduct(P)) {
+		// Construct a plane using normal N and any point P on the plane
+		Plane(const Vector3<T>& N, const Vector3<T>& P) : m_N(N), m_D(-N.dotProduct(P)), m_sqrNLength(m_N.x*m_N.x+m_N.y*m_N.y+m_N.z*m_N.z) {
 			
 		}
 	};

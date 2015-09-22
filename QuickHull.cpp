@@ -57,6 +57,7 @@ namespace quickhull {
 	template<typename T>
 	void QuickHull<T>::createConvexHalfEdgeMesh() {
 		const auto& pointCloud = *m_vertexData;
+		const T epsilonSquared = m_epsilon*m_epsilon;
 		
 		// Temporary variables used during iteration
 		std::vector<IndexType> visibleFaces;
@@ -229,7 +230,7 @@ namespace quickhull {
 
 				auto& newFace = m_mesh.m_faces[newFaceIndex];
 
-				const Vector3<T> planeNormal = mathutils::getTriangleUnitNormal(pointCloud[A],pointCloud[B],activePoint);
+				const Vector3<T> planeNormal = mathutils::getTriangleNormal(pointCloud[A],pointCloud[B],activePoint);
 				newFace.m_P = Plane<T>(planeNormal,activePoint);
 				newFace.m_he = AB;
 
@@ -248,7 +249,7 @@ namespace quickhull {
 					for (size_t j=0;j<horizonEdgeCount;j++) {
 						auto& newFace = m_mesh.m_faces[m_newFaceIndices[j]];
 						const T D = mathutils::getSignedDistanceToPlane(pointCloud[ point ],newFace.m_P);
-						if (D>m_epsilon) {
+						if (D>0 && D*D > epsilonSquared*newFace.m_P.m_sqrNLength) {
 							if (!newFace.m_pointsOnPositiveSide) {
 								newFace.m_pointsOnPositiveSide = std::move(m_mesh.getIndexVectorFromPool());
 							}
@@ -516,6 +517,7 @@ namespace quickhull {
 	template <typename T>
 	Mesh<T> QuickHull<T>::getInitialTetrahedron() {
 		auto& vertices = *m_vertexData;
+		const T epsilonSquared = m_epsilon*m_epsilon;
 
 		// Find two most distant extreme points.
 		T maxD = 0.0f;
@@ -576,7 +578,7 @@ namespace quickhull {
 			const Vector3<T>& va = vertices[v[0]];
 			const Vector3<T>& vb = vertices[v[1]];
 			const Vector3<T>& vc = vertices[v[2]];
-			const Vector3<T> N = (vb-va).crossProduct(vc-va).getNormalized();
+			const Vector3<T> N = mathutils::getTriangleNormal(va, vb, vc);
 			Plane<T> trianglePlane(N,va);
 			f.m_P = trianglePlane;
 		}
@@ -585,7 +587,7 @@ namespace quickhull {
 		for (IndexType i=0;i<vCount;i++) {
 			for (auto& face : mesh.m_faces) {
 				const T D = mathutils::getSignedDistanceToPlane(vertices[i],face.m_P);
-				if (D>m_epsilon) {
+				if (D>0 && D*D > epsilonSquared*face.m_P.m_sqrNLength) {
 					if (!face.m_pointsOnPositiveSide) {
 						face.m_pointsOnPositiveSide.reset(new std::vector<IndexType>());
 					}
