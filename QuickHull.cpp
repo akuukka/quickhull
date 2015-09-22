@@ -554,8 +554,8 @@ namespace quickhull {
 		// Next step is to find the 4th vertex of the tetrahedron. We naturally choose the point farthest away from the triangle plane.
 		maxD=0.0f;
 		maxI = 0;
-		const Vector3<T> N = (baseTriangleVertices[1]-baseTriangleVertices[0]).crossProduct(baseTriangleVertices[2]-baseTriangleVertices[0]).getNormalized();
-		Plane<T> trianglePlane(N,vertices[baseTriangle[0]]);
+		const Vector3<T> N = mathutils::getTriangleNormal(baseTriangleVertices[0],baseTriangleVertices[1],baseTriangleVertices[2]);
+		Plane<T> trianglePlane(N,baseTriangleVertices[0]);
 		for (IndexType i=0;i<vCount;i++) {
 			const T d = std::abs(mathutils::getSignedDistanceToPlane(vertices[i],trianglePlane));
 			if (d>maxD) {
