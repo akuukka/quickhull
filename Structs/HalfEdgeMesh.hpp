@@ -66,7 +66,7 @@ namespace quickhull {
 		std::vector<HalfEdge> m_halfEdges;
 		
 		// When the mesh is modified and faces and half edges are removed from it, we do not actually remove them from the container vectors.
-		// Insted, they are mark as disabled which means that the indices can be reused when we need to add new faces and half edges to the mesh.
+		// Insted, they are marked as disabled which means that the indices can be reused when we need to add new faces and half edges to the mesh.
 		// We store the free indices in the following vectors.
 		std::vector<IndexType> m_disabledFaces,m_disabledHalfEdges;
 		

@@ -15,7 +15,6 @@ namespace quickhull {
 	template<typename T>
 	class Plane {
 	public:
-		// Unit normal of the plane
 		Vector3<T> m_N;
 		
 		// Signed distance (if normal is of length 1) to the plane from origin
