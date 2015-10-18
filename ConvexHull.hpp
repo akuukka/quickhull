@@ -62,6 +62,7 @@ namespace quickhull {
 						auto it = vertexIndexMapping.find(v);
 						if (it == vertexIndexMapping.end()) {
 							m_vertices.push_back(pointCloud[v]);
+							vertexIndexMapping[v] = m_vertices.size()-1;
 							v = m_vertices.size()-1;
 						}
 						else {
