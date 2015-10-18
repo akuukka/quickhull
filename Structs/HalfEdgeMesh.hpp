@@ -118,7 +118,7 @@ namespace quickhull {
 				m_disabledHalfEdges.erase(it);
 				return index;
 			}
-			m_halfEdges.push_back(HalfEdge());
+			m_halfEdges.emplace_back();
 			return m_halfEdges.size()-1;
 		}
 

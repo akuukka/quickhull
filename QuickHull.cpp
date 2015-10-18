@@ -139,7 +139,7 @@ namespace quickhull {
 						}
 						continue;
 					}
-					assert(faceData.m_faceIndex != topFaceIndex); // Of course the top face should be visible because active point is on positive side of it
+					assert(faceData.m_faceIndex != topFaceIndex);
 				}
 
 				// The face is not visible. Therefore, the halfedge we came from is part of the horizon edge.
@@ -147,7 +147,7 @@ namespace quickhull {
 				horizonEdges.push_back(faceData.m_enteredFromHalfEdge);
 				// Store which half edge is the horizon edge. The other half edges of the face will not be part of the final mesh so their data slots can by recycled.
 				std::int8_t ind = -1;
-				auto halfEdges = m_mesh.getHalfEdgeIndicesOfFace(m_mesh.m_faces[m_mesh.m_halfEdges[faceData.m_enteredFromHalfEdge].m_face]);
+				const auto halfEdges = m_mesh.getHalfEdgeIndicesOfFace(m_mesh.m_faces[m_mesh.m_halfEdges[faceData.m_enteredFromHalfEdge].m_face]);
 				for (std::int8_t k=0;k<3;k++) {
 					if (halfEdges[k] == faceData.m_enteredFromHalfEdge) {
 						ind = k;
@@ -167,8 +167,8 @@ namespace quickhull {
 				continue;
 			}
 
-			// Except for the horizon edges, all half edges of the visible faces can be marked disabled. Their data slots will be reused.
-			// The faces will be disabled as well, but we need to remember the points that were on the positive side of them, therefore
+			// Except for the horizon edges, all half edges of the visible faces can be marked as disabled. Their data slots will be reused.
+			// The faces will be disabled as well, but we need to remember the points that were on the positive side of them - therefore
 			// we save pointers to them.
 			m_newFaceIndices.clear();
 			m_newHalfEdgeIndices.clear();
@@ -499,7 +499,7 @@ namespace quickhull {
 			IndexType endVertex = m_mesh.m_halfEdges[ horizonEdges[i] ].m_endVertex;
 			bool foundNext = false;
 			for (size_t j=i+1;j<horizonEdgeCount;j++) {
-				IndexType beginVertex = m_mesh.m_halfEdges[ m_mesh.m_halfEdges[horizonEdges[j]].m_opp ].m_endVertex;
+				const IndexType beginVertex = m_mesh.m_halfEdges[ m_mesh.m_halfEdges[horizonEdges[j]].m_opp ].m_endVertex;
 				if (beginVertex == endVertex) {
 					std::swap(horizonEdges[i+1],horizonEdges[j]);
 					foundNext = true;
@@ -534,18 +534,17 @@ namespace quickhull {
 		assert(maxD > 0.0);
 		
 		// Find the most distant point to the line between the two chosen extreme points.
-		Ray<T> r(vertices[selectedPoints.first], (vertices[selectedPoints.second] - vertices[selectedPoints.first]));
+		const Ray<T> r(vertices[selectedPoints.first], (vertices[selectedPoints.second] - vertices[selectedPoints.first]));
 		maxD=0.0f;
-		IndexType maxI=std::numeric_limits<IndexType>::max();
+		size_t maxI=std::numeric_limits<size_t>::max();
 		const size_t vCount = vertices.size();
 		for (size_t i=0;i<vCount;i++) {
-			T distToRay = mathutils::getSquaredDistanceBetweenPointAndRay(vertices[i],r);
+			const T distToRay = mathutils::getSquaredDistanceBetweenPointAndRay(vertices[i],r);
 			if (distToRay > maxD) {
 				maxD=distToRay;
-				maxI=(IndexType)i;
+				maxI=i;
 			}
 		}
-		
 		assert(maxI!=std::numeric_limits<IndexType>::max());
 
 		// These three points form the base triangle for our tetrahedron.
@@ -557,7 +556,7 @@ namespace quickhull {
 		maxI = 0;
 		const Vector3<T> N = mathutils::getTriangleNormal(baseTriangleVertices[0],baseTriangleVertices[1],baseTriangleVertices[2]);
 		Plane<T> trianglePlane(N,baseTriangleVertices[0]);
-		for (IndexType i=0;i<vCount;i++) {
+		for (size_t i=0;i<vCount;i++) {
 			const T d = std::abs(mathutils::getSignedDistanceToPlane(vertices[i],trianglePlane));
 			if (d>maxD) {
 				maxD=d;
@@ -566,9 +565,9 @@ namespace quickhull {
 		}
 
 		// Now that we have the 4th point, we can create the tetrahedron
-		Plane<T> triPlane(N,baseTriangleVertices[0]);
+		const Plane<T> triPlane(N,baseTriangleVertices[0]);
 		if (triPlane.isPointOnPositiveSide(vertices[maxI])) {
-			// Enforce CCW orientation
+			// Enforce CCW orientation (if user prefers clockwise orientation, swap two vertices in each triangle when final mesh created)
 			std::swap(baseTriangle[0],baseTriangle[1]);
 		}
 
@@ -580,12 +579,12 @@ namespace quickhull {
 			const Vector3<T>& vb = vertices[v[1]];
 			const Vector3<T>& vc = vertices[v[2]];
 			const Vector3<T> N = mathutils::getTriangleNormal(va, vb, vc);
-			Plane<T> trianglePlane(N,va);
+			const Plane<T> trianglePlane(N,va);
 			f.m_P = trianglePlane;
 		}
 
 		// Finally we assign a face for each vertex outside the tetrahedron
-		for (IndexType i=0;i<vCount;i++) {
+		for (size_t i=0;i<vCount;i++) {
 			for (auto& face : mesh.m_faces) {
 				const T D = mathutils::getSignedDistanceToPlane(vertices[i],face.m_P);
 				if (D>0 && D*D > epsilonSquared*face.m_P.m_sqrNLength) {

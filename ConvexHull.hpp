@@ -101,7 +101,7 @@ namespace quickhull {
 			}
 			const auto& indBuf = getIndexBuffer();
 			size_t triangleCount = indBuf.size()/3;
-			for (int i=0;i<triangleCount;i++) {
+			for (size_t i=0;i<triangleCount;i++) {
 				objFile << "f " << indBuf[i*3]+1 << " " << indBuf[i*3+1]+1 << " " << indBuf[i*3+2]+1 << "\n";
 			}
 			objFile.close();
