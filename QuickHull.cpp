@@ -516,14 +516,14 @@ namespace quickhull {
 
 	template <typename T>
 	Mesh<T> QuickHull<T>::getInitialTetrahedron() {
-		auto& vertices = *m_vertexData;
+		const auto& vertices = *m_vertexData;
 		const T epsilonSquared = m_epsilon*m_epsilon;
 
 		// Find two most distant extreme points.
 		T maxD = 0.0f;
 		std::pair<IndexType,IndexType> selectedPoints;
-		for (IndexType i=0;i<6;i++) {
-			for (IndexType j=i+1;j<6;j++) {
+		for (size_t i=0;i<6;i++) {
+			for (size_t j=i+1;j<6;j++) {
 				const T d = vertices[ m_extremeValues[i] ].getSquaredDistanceTo( vertices[ m_extremeValues[j] ] );
 				if (d > maxD) {
 					maxD=d;
