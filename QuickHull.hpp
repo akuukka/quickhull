@@ -52,7 +52,6 @@
  * TO DO:
  *  - Implement a proper 2D QuickHull and use that to solve the degenerate 2D case (when all the points lie on the same plane in 3D space).
  *  - Make the public interface more flexible (accept vertex data as const float*, const double*, etc)
- *  - Investigate possibility to use unnormalized triangle normals to gain some speed
  * */
 
 namespace quickhull {
