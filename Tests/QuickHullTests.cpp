@@ -42,7 +42,7 @@ namespace quickhull {
 			
 			// Test 2 : random N points from the boundary of unit sphere. Result mesh must have exactly N points.
 			const FloatType pi = 3.14159f;
-			const int M = 200;
+			const int M = 450;
 			pc.clear();
 			for (int i=0;i<=M;i++) {
 				FloatType y = std::sin(pi/2 + (FloatType)i/(M)*pi);
@@ -57,6 +57,7 @@ namespace quickhull {
 			}
 			hull = qh.getConvexHull(pc,true);
 			assert(pc.size() == hull.getVertexBuffer().size());
+			
 		}
 		
 	}

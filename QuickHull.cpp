@@ -287,7 +287,8 @@ namespace quickhull {
 			// Increase face stack size if needed
 			for (auto newFaceIndex : m_newFaceIndices) {
 				auto& newFace = m_mesh.m_faces[newFaceIndex];
-				if (newFace.m_pointsOnPositiveSide && newFace.m_pointsOnPositiveSide->size()) {
+				if (newFace.m_pointsOnPositiveSide) {
+					assert(newFace.m_pointsOnPositiveSide->size()>0);
 					if (!newFace.m_inFaceStack) {
 						faceStack.push_back(newFaceIndex);
 						newFace.m_inFaceStack = 1;
