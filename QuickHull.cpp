@@ -534,7 +534,7 @@ namespace quickhull {
 		const T epsilonSquared = m_epsilon*m_epsilon;
 
 		// Find two most distant extreme points.
-		T maxD = 0.0f;
+		T maxD = 0;
 		std::pair<IndexType,IndexType> selectedPoints;
 		for (size_t i=0;i<6;i++) {
 			for (size_t j=i+1;j<6;j++) {
@@ -545,11 +545,11 @@ namespace quickhull {
 				}
 			}
 		}
-		assert(maxD > 0.0);
+		assert(maxD > 0);
 		
 		// Find the most distant point to the line between the two chosen extreme points.
 		const Ray<T> r(m_vertexData[selectedPoints.first], (m_vertexData[selectedPoints.second] - m_vertexData[selectedPoints.first]));
-		maxD=0.0f;
+		maxD=0;
 		size_t maxI=std::numeric_limits<size_t>::max();
 		const size_t vCount = m_vertexData.size();
 		for (size_t i=0;i<vCount;i++) {
@@ -566,7 +566,7 @@ namespace quickhull {
 		const Vector3<T> baseTriangleVertices[]={ m_vertexData[baseTriangle[0]], m_vertexData[baseTriangle[1]],  m_vertexData[baseTriangle[2]] };
 		
 		// Next step is to find the 4th vertex of the tetrahedron. We naturally choose the point farthest away from the triangle plane.
-		maxD=0.0f;
+		maxD=0;
 		maxI = 0;
 		const Vector3<T> N = mathutils::getTriangleNormal(baseTriangleVertices[0],baseTriangleVertices[1],baseTriangleVertices[2]);
 		Plane<T> trianglePlane(N,baseTriangleVertices[0]);
@@ -581,7 +581,7 @@ namespace quickhull {
 		// Now that we have the 4th point, we can create the tetrahedron
 		const Plane<T> triPlane(N,baseTriangleVertices[0]);
 		if (triPlane.isPointOnPositiveSide(m_vertexData[maxI])) {
-			// Enforce CCW orientation (if user prefers clockwise orientation, swap two vertices in each triangle when final mesh created)
+			// Enforce CCW orientation (if user prefers clockwise orientation, swap two vertices in each triangle when final mesh is created)
 			std::swap(baseTriangle[0],baseTriangle[1]);
 		}
 

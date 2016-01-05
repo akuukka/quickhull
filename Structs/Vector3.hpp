@@ -10,9 +10,7 @@ namespace quickhull {
 	class Vector3
 	{
 	public:
-		Vector3() {
-			
-		}
+		Vector3() = default;
 		
 		Vector3(T x, T y, T z) : x(x), y(y), z(z) {
 			

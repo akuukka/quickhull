@@ -134,7 +134,7 @@ namespace quickhull {
 			m_disabledHalfEdges.push_back(heIndex);
 		}
 
-		Mesh() {}
+		Mesh() = default;
 
 		// Create a mesh with initial tetrahedron ABCD. Dot product of AB with the normal of triangle ABC should be negative.
 		Mesh(IndexType a, IndexType b, IndexType c, IndexType d) {
