@@ -10,6 +10,7 @@
 
 #include "Structs/Vector3.hpp"
 #include "Structs/HalfEdgeMesh.hpp"
+#include "Structs/VertexDataSource.hpp"
 #include <vector>
 #include <unordered_map>
 #include <fstream>
@@ -24,7 +25,7 @@ namespace quickhull {
 		ConvexHull() {}
 
 		// Construct vertex and index buffers from half edge mesh and pointcloud
-		ConvexHull(const Mesh<T>& mesh, const std::vector<Vector3<T>>& pointCloud, bool CCW) {
+		ConvexHull(const Mesh<T>& mesh, const VertexDataSource<T>& pointCloud, bool CCW) {
 			std::vector<bool> faceProcessed(mesh.m_faces.size(),false);
 			std::vector<size_t> faceStack;
 			std::unordered_map<size_t,size_t> vertexIndexMapping; // Map vertex indices from original point cloud to the new mesh vertex indices

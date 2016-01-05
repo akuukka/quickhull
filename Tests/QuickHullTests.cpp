@@ -1,0 +1,63 @@
+//
+//  QuickHullTests.cpp
+//  QuickHull
+//
+//  Created by Antti Kuukka on 1/5/16.
+//  Copyright © 2016 Antti Kuukka. All rights reserved.
+//
+
+#include "../QuickHull.hpp"
+#include <iostream>
+#include <random>
+#include <cassert>
+
+namespace quickhull {
+	
+	namespace tests {
+		
+		void run() {
+			// Setup test env
+			typedef float FloatType;
+			const size_t N = 1000;
+			std::vector<Vector3<FloatType>> pc;
+			QuickHull<FloatType> qh;
+			
+			// Setup RNG
+			std::mt19937 rng;
+			std::uniform_real_distribution<> dist(0,1);
+			auto rnd = [&](FloatType from, FloatType to) {
+				return from + (FloatType)dist(rng)*(to-from);
+			};
+			
+			// Test 1 : Puts N points inside unit cube. Result mesh must have exactly 8 vertices because the convex hull is the unit cube.
+			for (int i=0;i<8;i++) {
+				pc.emplace_back(i&1 ? -1 : 1,i&2 ? -1 : 1,i&4 ? -1 : 1);
+			}
+			for (size_t i=0;i<N;i++)
+			{
+				pc.emplace_back(rnd(-1,1),rnd(-1,1),rnd(-1,1));
+			}
+			auto hull = qh.getConvexHull(pc,true);
+			assert(hull.getVertexBuffer().size()==8);
+			
+			// Test 2 : random N points from the boundary of unit sphere. Result mesh must have exactly N points.
+			const FloatType pi = 3.14159f;
+			const int M = 200;
+			pc.clear();
+			for (int i=0;i<=M;i++) {
+				FloatType y = std::sin(pi/2 + (FloatType)i/(M)*pi);
+				FloatType r = std::cos(pi/2 + (FloatType)i/(M)*pi);
+				FloatType K = FloatType(1)-std::abs((FloatType)((FloatType)i-M/2.0f))/(FloatType)(M/2.0f);
+				const size_t pcount = (size_t)(1 + K*M + FloatType(1)/2);
+				for (size_t j=0;j<pcount;j++) {
+					FloatType x = pcount>1 ? r*std::cos((FloatType)j/pcount*pi*2) : 0;
+					FloatType z = pcount>1 ? r*std::sin((FloatType)j/pcount*pi*2) : 0;
+					pc.emplace_back(x,y,z);
+				}
+			}
+			hull = qh.getConvexHull(pc,true);
+			assert(pc.size() == hull.getVertexBuffer().size());
+		}
+		
+	}
+}

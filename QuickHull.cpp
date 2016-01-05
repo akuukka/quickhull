@@ -20,13 +20,31 @@ namespace quickhull {
 	/*
 	 * Implementation of the algorithm
 	 */
-
+	
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW) {
+		VertexDataSource<T> vertexDataSource(pointCloud);
+		return getConvexHull(vertexDataSource,CCW);
+	}
+	
+	template<typename T>
+	ConvexHull<T> QuickHull<T>::getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW) {
+		VertexDataSource<T> vertexDataSource(vertexData,vertexCount);
+		return getConvexHull(vertexDataSource,CCW);
+	}
+	
+	template<typename T>
+	ConvexHull<T> QuickHull<T>::getConvexHull(const T* vertexData, size_t vertexCount, bool CCW) {
+		VertexDataSource<T> vertexDataSource((const Vector3<T>*)vertexData,vertexCount);
+		return getConvexHull(vertexDataSource,CCW);
+	}
+
+	template<typename T>
+	ConvexHull<T> QuickHull<T>::getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW) {
 		if (pointCloud.size()==0) {
 			return ConvexHull<T>();
 		}
-		m_vertexData = &pointCloud;
+		m_vertexData = pointCloud;
 
 		// Very first: find extreme values and use them to compute the scale of the point cloud.
 		m_extremeValues = findExtremeValues(pointCloud);
@@ -51,12 +69,12 @@ namespace quickhull {
 		}
 		
 		createConvexHalfEdgeMesh();
-		return ConvexHull<T>(m_mesh,*m_vertexData, CCW);
+		return ConvexHull<T>(m_mesh,m_vertexData, CCW);
 	}
 
 	template<typename T>
 	void QuickHull<T>::createConvexHalfEdgeMesh() {
-		const auto& pointCloud = *m_vertexData;
+		const auto& pointCloud = m_vertexData;
 		const T epsilonSquared = m_epsilon*m_epsilon;
 		
 		// Temporary variables used during iteration
@@ -286,36 +304,32 @@ namespace quickhull {
 	 
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D() {
-		const std::vector<Vector3<T>>& pointCloud = *m_vertexData;
-
 		// 0D degenerate case: all points are at the same location
-		const Vector3<T>& v0 = *pointCloud.begin();
-		for (const auto& v : pointCloud) {
+		const Vector3<T>& v0 = *m_vertexData.begin();
+		for (const auto& v : m_vertexData) {
 			T d = (v-v0).getLengthSquared();
 			if (d>m_epsilon*m_epsilon) {
 				return ConvexHull<T>();
 			}
 		}
 #ifdef DEBUG
-		std::cout << "Detected 0D degenerate case: all points are at " << pointCloud[0] << "\n";
+		std::cout << "Detected 0D degenerate case: all points are at " << m_vertexData[0] << "\n";
 #endif
 
 		ConvexHull<T> simpleHull;
 		auto& indices = simpleHull.getIndexBuffer();
 		auto& vertices = simpleHull.getVertexBuffer();
 		indices.push_back(0);
-		indices.push_back(std::min((size_t)1,pointCloud.size()-1));
-		indices.push_back(std::min((size_t)2,pointCloud.size()-1));
-		vertices.push_back(pointCloud[indices[0]]);
-		vertices.push_back(pointCloud[indices[1]]);
-		vertices.push_back(pointCloud[indices[2]]);
+		indices.push_back(std::min((size_t)1,m_vertexData.size()-1));
+		indices.push_back(std::min((size_t)2,m_vertexData.size()-1));
+		vertices.push_back(m_vertexData[indices[0]]);
+		vertices.push_back(m_vertexData[indices[1]]);
+		vertices.push_back(m_vertexData[indices[2]]);
 		return simpleHull;
 	}
 
 	template <typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase1D() {
-		const std::vector<Vector3<T>>& vertices = *m_vertexData;
-
 		// 1D degenerate case: the points form a line in 3D space. To keep things simple, we translate the points so that the first point resides at the origin. This way, if the points do actually form a line, we have a line passing through the origin.
 		const Vector3<T>* firstPoint = nullptr;
 		T firstPointLengthSquared=0;
@@ -326,8 +340,8 @@ namespace quickhull {
 		T minDot = 1.0f;
 
 		// First find a point which does not reside at the origin. Such a point exists, for otherwise we would have the 0D case.
-		for (const auto& v : vertices) {
-			const auto v2 = v-vertices[0];
+		for (const auto& v : m_vertexData) {
+			const auto v2 = v-m_vertexData[0];
 			if (firstPoint == nullptr) {
 				if (v2.getLengthSquared() > epsilonSquared) {
 					firstPoint = &v;
@@ -339,9 +353,9 @@ namespace quickhull {
 		assert(firstPoint != nullptr);
 
 		// Then check if all other translated points point to the same direction as (firstPoint-pointCloud[0]) - or lie at the origin. If not, proceed to checking the 2D degenerate case. While looping, keep track of min and max dot product because if the point cloud turns out to be a line, the min and max points are its end points.
-		for (const auto& v : vertices) {
-			const auto v2 = v-vertices[0];
-			const T dot = v2.dotProduct(*firstPoint-vertices[0]);
+		for (const auto& v : m_vertexData) {
+			const auto v2 = v-m_vertexData[0];
+			const T dot = v2.dotProduct(*firstPoint-m_vertexData[0]);
 			if (v2.getLengthSquared()>epsilonSquared) {
 				const T V = dot*dot/(v2.getLengthSquared()*firstPointLengthSquared);
 				const T d = std::abs(V-1);
@@ -365,7 +379,7 @@ namespace quickhull {
 		std::cout << "Detected 1D degenerate case: the point cloud forms a line between " << *minPoint << " and " << *maxPoint << std::endl;
 #endif
 		const Vector3<T>* thirdPoint = nullptr;
-		for (const auto& v : vertices) {
+		for (const auto& v : m_vertexData) {
 			if (&v != minPoint && &v != maxPoint) {
 				thirdPoint = &v;
 				break;
@@ -384,8 +398,6 @@ namespace quickhull {
 
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase2D() {
-		const std::vector<Vector3<T>>& pointCloud = *m_vertexData;
-
 		// 2D degenerate case: all points lie on the same plane. Just like in the 1D case, we translate the points so that the first point is located at the origin.
 		const T epsilonSquared = m_epsilon*m_epsilon;
 
@@ -393,8 +405,8 @@ namespace quickhull {
 		const Vector3<T>* firstPoint = nullptr;
 		const Vector3<T>* secondPoint = nullptr;
 		T firstPointLengthSquared = 0.0f;
-		for (const auto& v : pointCloud) {
-			const auto& vt = v-pointCloud[0];
+		for (const auto& v : m_vertexData) {
+			const auto& vt = v-m_vertexData[0];
 			if (vt.getLengthSquared()>epsilonSquared) {
 				if (firstPoint == nullptr) {
 					firstPoint = &v;
@@ -402,7 +414,7 @@ namespace quickhull {
 					continue;
 				}
 
-				const T dot = vt.dotProduct(*firstPoint - pointCloud[0]);
+				const T dot = vt.dotProduct(*firstPoint - m_vertexData[0]);
 				const T V = dot*dot/(vt.getLengthSquared()*firstPointLengthSquared);
 				const T d = std::abs(V-1);
 				if (d > Epsilon) {
@@ -414,9 +426,9 @@ namespace quickhull {
 		}
 		assert(firstPoint != nullptr && secondPoint != nullptr);
 		// Now firstPoint and secondPoint define a plane. Its normal is their cross product.
-		const Vector3<T> cross = (*firstPoint-pointCloud[0]).crossProduct(*secondPoint-pointCloud[0]).getNormalized();
-		for (const auto& v : pointCloud) {
-			const auto& vt = v-pointCloud[0];
+		const Vector3<T> cross = (*firstPoint-m_vertexData[0]).crossProduct(*secondPoint-m_vertexData[0]).getNormalized();
+		for (const auto& v : m_vertexData) {
+			const auto& vt = v-m_vertexData[0];
 			const T d = std::abs(vt.dotProduct(cross));
 			if (d > m_epsilon) {
 				// We have a proper 3D point cloud and the QuickHull algorithm can be applied.
@@ -429,12 +441,15 @@ namespace quickhull {
 #ifdef DEBUG
 		std::cout << "Degenerate 2D case detected." << std::endl;
 #endif
-		auto newPoints = pointCloud;
+		std::vector<Vector3<T>> newPoints;
+		for (const auto& v : m_vertexData) {
+			newPoints.push_back(v);
+		}
 		const T M = m_epsilon/Epsilon;
-		auto extraPoint = M*cross + pointCloud[0];
+		auto extraPoint = M*cross + m_vertexData[0];
 		newPoints.push_back(extraPoint);
 
-		m_vertexData = &newPoints;
+		m_vertexData = VertexDataSource<T>(newPoints);
 		createConvexHalfEdgeMesh();
 
 		std::vector<size_t> disableList;
@@ -458,7 +473,7 @@ namespace quickhull {
 	 */
 
 	template <typename T>
-	std::array<IndexType,6> QuickHull<T>::findExtremeValues(const std::vector<Vector3<T>>& vPositions) {
+	std::array<IndexType,6> QuickHull<T>::findExtremeValues(const VertexDataSource<T>& vPositions) {
 		std::array<IndexType,6> outIndices{0,0,0,0,0,0};
 		T extremeVals[6] = {vPositions[0].x,vPositions[0].x,vPositions[0].y,vPositions[0].y,vPositions[0].z,vPositions[0].z};
 		const size_t vCount = vPositions.size();
@@ -516,7 +531,7 @@ namespace quickhull {
 
 	template <typename T>
 	Mesh<T> QuickHull<T>::getInitialTetrahedron() {
-		const auto& vertices = *m_vertexData;
+		const auto& vertices = m_vertexData;
 		const T epsilonSquared = m_epsilon*m_epsilon;
 
 		// Find two most distant extreme points.

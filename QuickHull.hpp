@@ -55,13 +55,13 @@
  * */
 
 namespace quickhull {
-
+	
 	template<typename T>
 	class QuickHull {
 		static const T Epsilon;
 
 		T m_epsilon;
-		const std::vector<Vector3<T>>* m_vertexData;
+		VertexDataSource<T> m_vertexData;
 		Mesh<T> m_mesh;
 		std::array<IndexType,6> m_extremeValues;
 
@@ -82,16 +82,34 @@ namespace quickhull {
 		bool reorderHorizonEdges(std::vector<IndexType>& horizonEdges);
 		
 		// Find indices of extreme values (max x, min x, max y, min y, max z, min z) for the given point cloud
-		std::array<IndexType,6> findExtremeValues(const std::vector<Vector3<T>>& vPositions);
+		std::array<IndexType,6> findExtremeValues(const VertexDataSource<T>& vPositions);
 
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();
+		
+		// The public getConvexHull functions will setup a VertexDataSource object and call this
+		ConvexHull<T> getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW);
 	public:
 		// Computes convex hull for a given point cloud.
 		// Params:
-		//   pointCloud: a list of 3D points
+		//   pointCloud: a vector of of 3D points
 		//   CCW: whether the output mesh triangles should have CCW orientation
 		ConvexHull<T> getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW);
+		
+		// Computes convex hull for a given point cloud.
+		// Params:
+		//   vertexData: pointer to the first 3D point of the point cloud
+		//   vertexCount: number of vertices in the point cloud
+		//   CCW: whether the output mesh triangles should have CCW orientation
+		ConvexHull<T> getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW);
+		
+		// Computes convex hull for a given point cloud. This function assumes that the vertex data resides in memory
+		// in the following way: x_0,y_0,z_0,x_1,y_1,z_1,...
+		// Params:
+		//   vertexData: pointer to the X component of the first point of the point cloud.
+		//   vertexCount: number of vertices in the point cloud
+		//   CCW: whether the output mesh triangles should have CCW orientation
+		ConvexHull<T> getConvexHull(const T* vertexData, size_t vertexCount, bool CCW);
 	};
 
 }
