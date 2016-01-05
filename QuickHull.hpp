@@ -82,7 +82,7 @@ namespace quickhull {
 		bool reorderHorizonEdges(std::vector<IndexType>& horizonEdges);
 		
 		// Find indices of extreme values (max x, min x, max y, min y, max z, min z) for the given point cloud
-		std::array<IndexType,6> findExtremeValues(const VertexDataSource<T>& vPositions);
+		std::array<IndexType,6> getExtremeValues();
 
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();

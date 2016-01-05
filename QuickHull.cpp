@@ -47,7 +47,7 @@ namespace quickhull {
 		m_vertexData = pointCloud;
 
 		// Very first: find extreme values and use them to compute the scale of the point cloud.
-		m_extremeValues = findExtremeValues(pointCloud);
+		m_extremeValues = getExtremeValues();
 		const Vector3<T> maxs(pointCloud[m_extremeValues[0]].x,pointCloud[m_extremeValues[2]].y,pointCloud[m_extremeValues[4]].z);
 		const Vector3<T> mins(pointCloud[m_extremeValues[1]].x,pointCloud[m_extremeValues[3]].y,pointCloud[m_extremeValues[5]].z);
 		const T scale = std::max(mins.getLength(),maxs.getLength());
@@ -473,17 +473,17 @@ namespace quickhull {
 	 */
 
 	template <typename T>
-	std::array<IndexType,6> QuickHull<T>::findExtremeValues(const VertexDataSource<T>& vPositions) {
+	std::array<IndexType,6> QuickHull<T>::getExtremeValues() {
 		std::array<IndexType,6> outIndices{0,0,0,0,0,0};
-		T extremeVals[6] = {vPositions[0].x,vPositions[0].x,vPositions[0].y,vPositions[0].y,vPositions[0].z,vPositions[0].z};
-		const size_t vCount = vPositions.size();
+		T extremeVals[6] = {m_vertexData[0].x,m_vertexData[0].x,m_vertexData[0].y,m_vertexData[0].y,m_vertexData[0].z,m_vertexData[0].z};
+		const size_t vCount = m_vertexData.size();
 		for (size_t i=1;i<vCount;i++) {
-			const Vector3<T>& pos = vPositions[i];
+			const Vector3<T>& pos = m_vertexData[i];
 			if (pos.x>extremeVals[0]) {
 				extremeVals[0]=pos.x;
 				outIndices[0]=(IndexType)i;
 			}
-			if (pos.x<extremeVals[1]) {
+			else if (pos.x<extremeVals[1]) {
 				extremeVals[1]=pos.x;
 				outIndices[1]=(IndexType)i;
 			}
@@ -491,7 +491,7 @@ namespace quickhull {
 				extremeVals[2]=pos.y;
 				outIndices[2]=(IndexType)i;
 			}
-			if (pos.y<extremeVals[3]) {
+			else if (pos.y<extremeVals[3]) {
 				extremeVals[3]=pos.y;
 				outIndices[3]=(IndexType)i;
 			}
@@ -499,7 +499,7 @@ namespace quickhull {
 				extremeVals[4]=pos.z;
 				outIndices[4]=(IndexType)i;
 			}
-			if (pos.z<extremeVals[5]) {
+			else if (pos.z<extremeVals[5]) {
 				extremeVals[5]=pos.z;
 				outIndices[5]=(IndexType)i;
 			}
@@ -511,7 +511,7 @@ namespace quickhull {
 	bool QuickHull<T>::reorderHorizonEdges(std::vector<IndexType>& horizonEdges) {
 		const size_t horizonEdgeCount = horizonEdges.size();
 		for (size_t i=0;i<horizonEdgeCount-1;i++) {
-			IndexType endVertex = m_mesh.m_halfEdges[ horizonEdges[i] ].m_endVertex;
+			const IndexType endVertex = m_mesh.m_halfEdges[ horizonEdges[i] ].m_endVertex;
 			bool foundNext = false;
 			for (size_t j=i+1;j<horizonEdgeCount;j++) {
 				const IndexType beginVertex = m_mesh.m_halfEdges[ m_mesh.m_halfEdges[horizonEdges[j]].m_opp ].m_endVertex;
@@ -531,7 +531,6 @@ namespace quickhull {
 
 	template <typename T>
 	Mesh<T> QuickHull<T>::getInitialTetrahedron() {
-		const auto& vertices = m_vertexData;
 		const T epsilonSquared = m_epsilon*m_epsilon;
 
 		// Find two most distant extreme points.
@@ -539,7 +538,7 @@ namespace quickhull {
 		std::pair<IndexType,IndexType> selectedPoints;
 		for (size_t i=0;i<6;i++) {
 			for (size_t j=i+1;j<6;j++) {
-				const T d = vertices[ m_extremeValues[i] ].getSquaredDistanceTo( vertices[ m_extremeValues[j] ] );
+				const T d = m_vertexData[ m_extremeValues[i] ].getSquaredDistanceTo( m_vertexData[ m_extremeValues[j] ] );
 				if (d > maxD) {
 					maxD=d;
 					selectedPoints=std::pair<IndexType,IndexType>(m_extremeValues[i],m_extremeValues[j]);
@@ -549,12 +548,12 @@ namespace quickhull {
 		assert(maxD > 0.0);
 		
 		// Find the most distant point to the line between the two chosen extreme points.
-		const Ray<T> r(vertices[selectedPoints.first], (vertices[selectedPoints.second] - vertices[selectedPoints.first]));
+		const Ray<T> r(m_vertexData[selectedPoints.first], (m_vertexData[selectedPoints.second] - m_vertexData[selectedPoints.first]));
 		maxD=0.0f;
 		size_t maxI=std::numeric_limits<size_t>::max();
-		const size_t vCount = vertices.size();
+		const size_t vCount = m_vertexData.size();
 		for (size_t i=0;i<vCount;i++) {
-			const T distToRay = mathutils::getSquaredDistanceBetweenPointAndRay(vertices[i],r);
+			const T distToRay = mathutils::getSquaredDistanceBetweenPointAndRay(m_vertexData[i],r);
 			if (distToRay > maxD) {
 				maxD=distToRay;
 				maxI=i;
@@ -564,7 +563,7 @@ namespace quickhull {
 
 		// These three points form the base triangle for our tetrahedron.
 		std::array<IndexType,3> baseTriangle{selectedPoints.first, selectedPoints.second, maxI};
-		const Vector3<T> baseTriangleVertices[]={ vertices[baseTriangle[0]], vertices[baseTriangle[1]],  vertices[baseTriangle[2]] };
+		const Vector3<T> baseTriangleVertices[]={ m_vertexData[baseTriangle[0]], m_vertexData[baseTriangle[1]],  m_vertexData[baseTriangle[2]] };
 		
 		// Next step is to find the 4th vertex of the tetrahedron. We naturally choose the point farthest away from the triangle plane.
 		maxD=0.0f;
@@ -572,7 +571,7 @@ namespace quickhull {
 		const Vector3<T> N = mathutils::getTriangleNormal(baseTriangleVertices[0],baseTriangleVertices[1],baseTriangleVertices[2]);
 		Plane<T> trianglePlane(N,baseTriangleVertices[0]);
 		for (size_t i=0;i<vCount;i++) {
-			const T d = std::abs(mathutils::getSignedDistanceToPlane(vertices[i],trianglePlane));
+			const T d = std::abs(mathutils::getSignedDistanceToPlane(m_vertexData[i],trianglePlane));
 			if (d>maxD) {
 				maxD=d;
 				maxI=i;
@@ -581,7 +580,7 @@ namespace quickhull {
 
 		// Now that we have the 4th point, we can create the tetrahedron
 		const Plane<T> triPlane(N,baseTriangleVertices[0]);
-		if (triPlane.isPointOnPositiveSide(vertices[maxI])) {
+		if (triPlane.isPointOnPositiveSide(m_vertexData[maxI])) {
 			// Enforce CCW orientation (if user prefers clockwise orientation, swap two vertices in each triangle when final mesh created)
 			std::swap(baseTriangle[0],baseTriangle[1]);
 		}
@@ -590,9 +589,9 @@ namespace quickhull {
 		Mesh<T> mesh(baseTriangle[0],baseTriangle[1],baseTriangle[2],maxI);
 		for (auto& f : mesh.m_faces) {
 			auto v = mesh.getVertexIndicesOfFace(f);
-			const Vector3<T>& va = vertices[v[0]];
-			const Vector3<T>& vb = vertices[v[1]];
-			const Vector3<T>& vc = vertices[v[2]];
+			const Vector3<T>& va = m_vertexData[v[0]];
+			const Vector3<T>& vb = m_vertexData[v[1]];
+			const Vector3<T>& vc = m_vertexData[v[2]];
 			const Vector3<T> N = mathutils::getTriangleNormal(va, vb, vc);
 			const Plane<T> trianglePlane(N,va);
 			f.m_P = trianglePlane;
@@ -601,7 +600,7 @@ namespace quickhull {
 		// Finally we assign a face for each vertex outside the tetrahedron
 		for (size_t i=0;i<vCount;i++) {
 			for (auto& face : mesh.m_faces) {
-				const T D = mathutils::getSignedDistanceToPlane(vertices[i],face.m_P);
+				const T D = mathutils::getSignedDistanceToPlane(m_vertexData[i],face.m_P);
 				if (D>0 && D*D > epsilonSquared*face.m_P.m_sqrNLength) {
 					if (!face.m_pointsOnPositiveSide) {
 						face.m_pointsOnPositiveSide.reset(new std::vector<IndexType>());
