@@ -210,7 +210,11 @@ namespace quickhull {
 				}
 				// Disabled the face, but retain pointer to the points that were on the positive side of it. We need to assign those points
 				// to the new faces we create shortly.
-				m_disabledFacePointVectors.push_back(std::move(m_mesh.disableFace(faceIndex)));
+				auto t = std::move(m_mesh.disableFace(faceIndex));
+				if (t) {
+					assert(t->size()); // Because we should not assign point vectors to faces unless needed...
+					m_disabledFacePointVectors.push_back(std::move(t));
+				}
 			}
 			if (disableCounter < horizonEdgeCount*2) {
 				const size_t newHalfEdgesNeeded = horizonEdgeCount*2-disableCounter;
@@ -258,8 +262,7 @@ namespace quickhull {
 
 			// Assign points that were on the positive side of the disabled faces to the new faces.
 			for (auto& disabledPoints : m_disabledFacePointVectors) {
-				if (!disabledPoints)
-					continue;
+				assert(disabledPoints);
 				for (const auto& point : *(disabledPoints)) {
 					if (point == activePointIndex) {
 						continue;
