@@ -58,6 +58,29 @@ namespace quickhull {
 			hull = qh.getConvexHull(pc,true);
 			assert(pc.size() == hull.getVertexBuffer().size());
 			
+			// Test 3: degenerate cases
+			pc.clear();
+			const Vector3<FloatType> a = Vector3<FloatType>(1,1,1).getNormalized();
+			const Vector3<FloatType> b = Vector3<FloatType>(-2,4,9).getNormalized();
+			const Vector3<FloatType> c(0,0,0);
+			pc.push_back(a);
+			hull = qh.getConvexHull(pc,true);
+			assert(hull.getVertexBuffer().size() == 3);
+			pc.push_back(b);
+			hull = qh.getConvexHull(pc,true);
+			assert(hull.getVertexBuffer().size() == 3);
+			pc.push_back(c);
+			hull = qh.getConvexHull(pc,true);
+			assert(hull.getVertexBuffer().size() == 3);
+			for (int i=0;i<N;i++) {
+				auto t = rnd(0.001f,0.999f);
+				auto d = a*t;
+				auto e = b*(1-t);
+				auto f = c + d + e;
+				pc.push_back(f);
+			}
+			hull = qh.getConvexHull(pc,true);
+			assert(hull.getVertexBuffer().size() == 3);
 		}
 		
 	}
