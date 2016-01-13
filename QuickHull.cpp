@@ -103,7 +103,7 @@ namespace quickhull {
 
 		// Process faces until the face list is empty.
 		size_t iter = 0;
-		size_t facePtr = faceList.size()-1;
+		size_t facePtr = faceList.size();
 		while (faceList.size() > 0) {
 			const size_t stackSize = faceList.size();
 			iter++;
