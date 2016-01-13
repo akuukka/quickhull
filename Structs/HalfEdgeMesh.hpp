@@ -51,7 +51,7 @@ namespace quickhull {
 			{
 
 			}
-
+			
 			void disable() {
 				m_he = std::numeric_limits<IndexType>::max();
 			}
@@ -96,7 +96,8 @@ namespace quickhull {
 			m_indexVectorPool.push_back(std::move(ptr));
 		}
 
-		IndexType addFace() {
+		template<typename... Args>
+		IndexType addFace(Args&&... args) {
 			if (m_disabledFaces.size()) {
 				auto it = m_disabledFaces.end()-1;
 				IndexType index = *it;

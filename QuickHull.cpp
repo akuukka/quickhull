@@ -74,7 +74,6 @@ namespace quickhull {
 
 	template<typename T>
 	void QuickHull<T>::createConvexHalfEdgeMesh() {
-		const auto& pointCloud = m_vertexData;
 		const T epsilonSquared = m_epsilon*m_epsilon;
 		
 		// Temporary variables used during iteration
@@ -92,18 +91,21 @@ namespace quickhull {
 		assert(m_mesh.m_faces.size()==4);
 
 		// Init face stack with those faces that have points assigned to them
-		std::vector<IndexType> faceStack;
+		std::vector<IndexType> faceList;
+		faceList.reserve(4);
 		for (size_t i=0;i < 4;i++) {
 			auto& f = m_mesh.m_faces[i];
 			if (f.m_pointsOnPositiveSide && f.m_pointsOnPositiveSide->size()>0) {
-				faceStack.push_back(i);
+				faceList.push_back(i);
 				f.m_inFaceStack = 1;
 			}
 		}
 
-		// Process faces until face stack is empty.
+		// Process faces until the face list is empty.
 		size_t iter = 0;
-		while (faceStack.size() > 0) {
+		size_t facePtr = faceList.size()-1;
+		while (faceList.size() > 0) {
+			const size_t stackSize = faceList.size();
 			iter++;
 			if (iter == std::numeric_limits<size_t>::max()) {
 				// Visible face traversal marks visited faces with iteration counter (to mark that the face has been visited on this iteration) and the max value represents unvisited faces. At this point we have to reset iteration counter. This shouldn't be an
@@ -111,9 +113,11 @@ namespace quickhull {
 				iter = 0;
 			}
 
-			// Pop topmost face from the stack
-			const IndexType topFaceIndex = *(faceStack.end()-1);
-			faceStack.erase(faceStack.end()-1);
+			// Pick a face from the list for inspection
+			facePtr = facePtr==0 ? stackSize-1 : facePtr-1;
+			const auto stackTopIterator = faceList.begin()+facePtr;
+			const IndexType topFaceIndex = *stackTopIterator;
+			faceList.erase(stackTopIterator);
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
 
@@ -123,7 +127,7 @@ namespace quickhull {
 			}
 			
 			// Pick the most distant point to this triangle plane as the point to which we extrude
-			const Vector3<T>& activePoint = pointCloud[tf.m_mostDistantPoint];
+			const Vector3<T>& activePoint = m_vertexData[tf.m_mostDistantPoint];
 			const size_t activePointIndex = tf.m_mostDistantPoint;
 
 			// Find out the faces that have our active point on their positive side (these are the "visible faces"). The face on top of the stack of course is one of them. At the same time, we create a list of horizon edges.
@@ -138,7 +142,7 @@ namespace quickhull {
 				possiblyVisibleFaces.erase(it);
 				auto& pvf = m_mesh.m_faces[faceData.m_faceIndex];
 				assert(!pvf.isDisabled());
-
+				
 				if (pvf.m_visibilityCheckedOnIteration == iter && pvf.m_isVisibleFaceOnCurrentIteration) {
 					continue;
 				}
@@ -252,7 +256,7 @@ namespace quickhull {
 
 				auto& newFace = m_mesh.m_faces[newFaceIndex];
 
-				const Vector3<T> planeNormal = mathutils::getTriangleNormal(pointCloud[A],pointCloud[B],activePoint);
+				const Vector3<T> planeNormal = mathutils::getTriangleNormal(m_vertexData[A],m_vertexData[B],activePoint);
 				newFace.m_P = Plane<T>(planeNormal,activePoint);
 				newFace.m_he = AB;
 
@@ -269,7 +273,7 @@ namespace quickhull {
 					}
 					for (size_t j=0;j<horizonEdgeCount;j++) {
 						auto& newFace = m_mesh.m_faces[m_newFaceIndices[j]];
-						const T D = mathutils::getSignedDistanceToPlane(pointCloud[ point ],newFace.m_P);
+						const T D = mathutils::getSignedDistanceToPlane(m_vertexData[ point ],newFace.m_P);
 						if (D>0 && D*D > epsilonSquared*newFace.m_P.m_sqrNLength) {
 							if (!newFace.m_pointsOnPositiveSide) {
 								newFace.m_pointsOnPositiveSide = std::move(m_mesh.getIndexVectorFromPool());
@@ -293,7 +297,7 @@ namespace quickhull {
 				if (newFace.m_pointsOnPositiveSide) {
 					assert(newFace.m_pointsOnPositiveSide->size()>0);
 					if (!newFace.m_inFaceStack) {
-						faceStack.push_back(newFaceIndex);
+						faceList.push_back(newFaceIndex);
 						newFace.m_inFaceStack = 1;
 					}
 				}
