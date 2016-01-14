@@ -9,6 +9,7 @@
 #include <deque>
 #include <limits>
 #include "Structs/HalfEdgeMesh.hpp"
+#include "Tests/ABTester.hpp"
 
 namespace quickhull {
 	
@@ -168,15 +169,8 @@ namespace quickhull {
 				pvf.m_isVisibleFaceOnCurrentIteration = 0;
 				horizonEdges.push_back(faceData.m_enteredFromHalfEdge);
 				// Store which half edge is the horizon edge. The other half edges of the face will not be part of the final mesh so their data slots can by recycled.
-				std::int8_t ind = -1;
 				const auto halfEdges = m_mesh.getHalfEdgeIndicesOfFace(m_mesh.m_faces[m_mesh.m_halfEdges[faceData.m_enteredFromHalfEdge].m_face]);
-				for (std::int8_t k=0;k<3;k++) {
-					if (halfEdges[k] == faceData.m_enteredFromHalfEdge) {
-						ind = k;
-						break;
-					}
-				}
-				assert(ind>=0);
+				const std::int8_t ind = (halfEdges[0]==faceData.m_enteredFromHalfEdge) ? 0 : (halfEdges[1]==faceData.m_enteredFromHalfEdge ? 1 : 2);
 				m_mesh.m_faces[m_mesh.m_halfEdges[faceData.m_enteredFromHalfEdge].m_face].m_horizonEdgesOnCurrentIteration |= (1<<ind);
 			}
 			const size_t horizonEdgeCount = horizonEdges.size();
@@ -212,7 +206,7 @@ namespace quickhull {
 						}
 					}
 				}
-				// Disabled the face, but retain pointer to the points that were on the positive side of it. We need to assign those points
+				// Disable the face, but retain pointer to the points that were on the positive side of it. We need to assign those points
 				// to the new faces we create shortly.
 				auto t = std::move(m_mesh.disableFace(faceIndex));
 				if (t) {
