@@ -6,6 +6,7 @@
 #include <functional>
 #include <iostream>
 #include <algorithm>
+#include <list>
 #include <limits>
 #include "Structs/HalfEdgeMesh.hpp"
 
@@ -91,8 +92,7 @@ namespace quickhull {
 		assert(m_mesh.m_faces.size()==4);
 
 		// Init face stack with those faces that have points assigned to them
-		std::vector<IndexType> faceList;
-		faceList.reserve(4);
+		std::list<IndexType> faceList;
 		for (size_t i=0;i < 4;i++) {
 			auto& f = m_mesh.m_faces[i];
 			if (f.m_pointsOnPositiveSide && f.m_pointsOnPositiveSide->size()>0) {
@@ -100,12 +100,15 @@ namespace quickhull {
 				f.m_inFaceStack = 1;
 			}
 		}
+		if (faceList.size()==0) {
+			return;
+		}
 
 		// Process faces until the face list is empty.
 		size_t iter = 0;
-		size_t facePtr = faceList.size();
+		auto faceIter = faceList.end();
+		faceIter--;
 		while (faceList.size() > 0) {
-			const size_t stackSize = faceList.size();
 			iter++;
 			if (iter == std::numeric_limits<size_t>::max()) {
 				// Visible face traversal marks visited faces with iteration counter (to mark that the face has been visited on this iteration) and the max value represents unvisited faces. At this point we have to reset iteration counter. This shouldn't be an
@@ -113,11 +116,15 @@ namespace quickhull {
 				iter = 0;
 			}
 
-			// Pick a face from the list for inspection
-			facePtr = facePtr==0 ? stackSize-1 : facePtr-1;
-			const auto stackTopIterator = faceList.begin()+facePtr;
-			const IndexType topFaceIndex = *stackTopIterator;
-			faceList.erase(stackTopIterator);
+			const IndexType topFaceIndex = *faceIter;
+			auto oldIter = faceIter;
+			if (faceIter==faceList.begin())
+			{
+				faceIter = faceList.end();
+			}
+			faceIter--;
+			faceList.erase(oldIter);
+			
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
 
