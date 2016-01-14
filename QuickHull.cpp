@@ -6,7 +6,6 @@
 #include <functional>
 #include <iostream>
 #include <algorithm>
-#include <list>
 #include <deque>
 #include <limits>
 #include "Structs/HalfEdgeMesh.hpp"
@@ -107,9 +106,7 @@ namespace quickhull {
 
 		// Process faces until the face list is empty.
 		size_t iter = 0;
-		auto faceIter = faceList.end();
-		faceIter--;
-		while (faceList.size() > 0) {
+		while (!faceList.empty()) {
 			iter++;
 			if (iter == std::numeric_limits<size_t>::max()) {
 				// Visible face traversal marks visited faces with iteration counter (to mark that the face has been visited on this iteration) and the max value represents unvisited faces. At this point we have to reset iteration counter. This shouldn't be an
@@ -117,8 +114,7 @@ namespace quickhull {
 				iter = 0;
 			}
 			
-			
-			faceIter = faceList.begin();
+			auto faceIter = faceList.begin();
 			const IndexType topFaceIndex = *faceIter;
 			faceList.erase(faceIter);
 			
