@@ -108,6 +108,7 @@ namespace quickhull {
 		size_t iter = 0;
 		auto faceIter = faceList.end();
 		faceIter--;
+		bool resetPtr = false;
 		while (faceList.size() > 0) {
 			iter++;
 			if (iter == std::numeric_limits<size_t>::max()) {
@@ -115,7 +116,14 @@ namespace quickhull {
 				// issue on 64 bit machines.
 				iter = 0;
 			}
-
+			
+			if (resetPtr)
+			{
+				faceIter = faceList.end();
+				faceIter--;
+				resetPtr=false;
+			}
+			
 			const IndexType topFaceIndex = *faceIter;
 			faceIter = faceList.erase(faceIter);
 			if (faceIter==faceList.begin())
@@ -123,8 +131,9 @@ namespace quickhull {
 				faceIter = faceList.end();
 			}
 			faceIter--;
-			/*auto oldIter = faceIter;
-			*/
+			if (faceList.empty()) {
+				resetPtr = true;
+			}
 			
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
