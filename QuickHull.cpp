@@ -100,7 +100,7 @@ namespace quickhull {
 				f.m_inFaceStack = 1;
 			}
 		}
-		if (faceList.size()==0) {
+		if (faceList.empty()) {
 			return;
 		}
 
@@ -117,13 +117,14 @@ namespace quickhull {
 			}
 
 			const IndexType topFaceIndex = *faceIter;
-			auto oldIter = faceIter;
+			faceIter = faceList.erase(faceIter);
 			if (faceIter==faceList.begin())
 			{
 				faceIter = faceList.end();
 			}
 			faceIter--;
-			faceList.erase(oldIter);
+			/*auto oldIter = faceIter;
+			*/
 			
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
