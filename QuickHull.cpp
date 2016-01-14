@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <list>
+#include <deque>
 #include <limits>
 #include "Structs/HalfEdgeMesh.hpp"
 
@@ -92,7 +93,7 @@ namespace quickhull {
 		assert(m_mesh.m_faces.size()==4);
 
 		// Init face stack with those faces that have points assigned to them
-		std::list<IndexType> faceList;
+		std::deque<IndexType> faceList;
 		for (size_t i=0;i < 4;i++) {
 			auto& f = m_mesh.m_faces[i];
 			if (f.m_pointsOnPositiveSide && f.m_pointsOnPositiveSide->size()>0) {
@@ -108,7 +109,6 @@ namespace quickhull {
 		size_t iter = 0;
 		auto faceIter = faceList.end();
 		faceIter--;
-		bool resetPtr = false;
 		while (faceList.size() > 0) {
 			iter++;
 			if (iter == std::numeric_limits<size_t>::max()) {
@@ -117,23 +117,10 @@ namespace quickhull {
 				iter = 0;
 			}
 			
-			if (resetPtr)
-			{
-				faceIter = faceList.end();
-				faceIter--;
-				resetPtr=false;
-			}
 			
+			faceIter = faceList.begin();
 			const IndexType topFaceIndex = *faceIter;
-			faceIter = faceList.erase(faceIter);
-			if (faceIter==faceList.begin())
-			{
-				faceIter = faceList.end();
-			}
-			faceIter--;
-			if (faceList.empty()) {
-				resetPtr = true;
-			}
+			faceList.erase(faceIter);
 			
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
