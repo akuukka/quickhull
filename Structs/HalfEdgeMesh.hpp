@@ -96,8 +96,7 @@ namespace quickhull {
 			m_indexVectorPool.push_back(std::move(ptr));
 		}
 
-		template<typename... Args>
-		IndexType addFace(Args&&... args) {
+		IndexType addFace() {
 			if (m_disabledFaces.size()) {
 				auto it = m_disabledFaces.end()-1;
 				IndexType index = *it;
