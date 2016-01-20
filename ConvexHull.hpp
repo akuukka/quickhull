@@ -179,11 +179,11 @@ namespace quickhull {
 		}
 		
 		// Export the mesh to a Waveform OBJ file
-		void writeWaveformOBJ(const std::string& filename)
+		void writeWaveformOBJ(const std::string& filename, const std::string& objectName = "quickhull")
 		{
 			std::ofstream objFile;
 			objFile.open (filename);
-			objFile << "o quickhull\n";
+			objFile << "o " << objectName << "\n";
 			for (const auto& v : getVertexBuffer()) {
 				objFile << "v " << v.x << " " << v.y << " " << v.z << "\n";
 			}
