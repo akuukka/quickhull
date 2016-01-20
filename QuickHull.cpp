@@ -9,7 +9,6 @@
 #include <deque>
 #include <limits>
 #include "Structs/HalfEdgeMesh.hpp"
-#include "Tests/ABTester.hpp"
 
 namespace quickhull {
 	
@@ -24,25 +23,25 @@ namespace quickhull {
 	 */
 	
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW, bool useOriginalIndices) {
 		VertexDataSource<T> vertexDataSource(pointCloud);
-		return getConvexHull(vertexDataSource,CCW);
+		return getConvexHull(vertexDataSource,CCW,useOriginalIndices);
 	}
 	
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices) {
 		VertexDataSource<T> vertexDataSource(vertexData,vertexCount);
-		return getConvexHull(vertexDataSource,CCW);
+		return getConvexHull(vertexDataSource,CCW,useOriginalIndices);
 	}
 	
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const T* vertexData, size_t vertexCount, bool CCW) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices) {
 		VertexDataSource<T> vertexDataSource((const Vector3<T>*)vertexData,vertexCount);
-		return getConvexHull(vertexDataSource,CCW);
+		return getConvexHull(vertexDataSource,CCW,useOriginalIndices);
 	}
 
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
 		if (pointCloud.size()==0) {
 			return ConvexHull<T>();
 		}
@@ -58,20 +57,20 @@ namespace quickhull {
 		m_epsilon = Epsilon*scale;
 
 		// Check for degenerate cases before proceeding to the 3D quickhull iteration phase
-		std::function<ConvexHull<T>(void)> degenerateCaseCheckers[] = {
-			std::bind(&QuickHull<T>::checkDegenerateCase0D,this),
-			std::bind(&QuickHull<T>::checkDegenerateCase1D,this),
-			std::bind(&QuickHull<T>::checkDegenerateCase2D,this)
+		std::function<ConvexHull<T>(bool)> degenerateCaseCheckers[] = {
+			std::bind(&QuickHull<T>::checkDegenerateCase0D,this,std::placeholders::_1),
+			std::bind(&QuickHull<T>::checkDegenerateCase1D,this,std::placeholders::_1),
+			std::bind(&QuickHull<T>::checkDegenerateCase2D,this,std::placeholders::_1)
 		};
 		for (auto& f : degenerateCaseCheckers) {
-			auto degenerateHull = f();
+			auto degenerateHull = f(useOriginalIndices);
 			if (degenerateHull.getVertexBuffer().size()) {
 				return degenerateHull;
 			}
 		}
 		
 		createConvexHalfEdgeMesh();
-		return ConvexHull<T>(m_mesh,m_vertexData, CCW);
+		return ConvexHull<T>(m_mesh,m_vertexData, CCW, useOriginalIndices);
 	}
 
 	template<typename T>
@@ -305,7 +304,7 @@ namespace quickhull {
 	 */
 	 
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D() {
+	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D(bool useOriginalIndices) {
 		// 0D degenerate case: all points are at the same location
 		const Vector3<T>& v0 = *m_vertexData.begin();
 		for (const auto& v : m_vertexData) {
@@ -317,89 +316,74 @@ namespace quickhull {
 #ifdef DEBUG
 		std::cout << "Detected 0D degenerate case: all points are at " << m_vertexData[0] << "\n";
 #endif
-
-		ConvexHull<T> simpleHull;
-		auto& indices = simpleHull.getIndexBuffer();
-		auto& vertices = simpleHull.getVertexBuffer();
-		indices.push_back(0);
-		indices.push_back(std::min((size_t)1,m_vertexData.size()-1));
-		indices.push_back(std::min((size_t)2,m_vertexData.size()-1));
-		vertices.push_back(m_vertexData[indices[0]]);
-		vertices.push_back(m_vertexData[indices[1]]);
-		vertices.push_back(m_vertexData[indices[2]]);
-		return simpleHull;
+		return ConvexHull<T>({0,1,2}, m_vertexData, true, useOriginalIndices);
 	}
 
 	template <typename T>
-	ConvexHull<T> QuickHull<T>::checkDegenerateCase1D() {
+	ConvexHull<T> QuickHull<T>::checkDegenerateCase1D(bool useOriginalIndices) {
 		// 1D degenerate case: the points form a line in 3D space. To keep things simple, we translate the points so that the first point resides at the origin. This way, if the points do actually form a line, we have a line passing through the origin.
-		const Vector3<T>* firstPoint = nullptr;
+		size_t firstPoint = -1;
 		T firstPointLengthSquared=0;
-		const Vector3<T>* maxPoint = nullptr;
-		const Vector3<T>* minPoint = nullptr;
+		size_t maxPoint = -1;
+		size_t minPoint = -1;
 		const T epsilonSquared = m_epsilon*m_epsilon;
 		T maxDot = -1.0f;
 		T minDot = 1.0f;
 
 		// First find a point which does not reside at the origin. Such a point exists, for otherwise we would have the 0D case.
-		for (const auto& v : m_vertexData) {
-			const auto v2 = v-m_vertexData[0];
-			if (firstPoint == nullptr) {
-				if (v2.getLengthSquared() > epsilonSquared) {
-					firstPoint = &v;
-					firstPointLengthSquared = v2.getLengthSquared();
+		for (size_t i=0;i<m_vertexData.size();i++) {
+			const auto v = m_vertexData[i]-m_vertexData[0];
+			if (firstPoint == -1) {
+				if (v.getLengthSquared() > epsilonSquared) {
+					firstPoint = i;
+					firstPointLengthSquared = v.getLengthSquared();
 					break;
 				}
 			}
 		}
-		assert(firstPoint != nullptr);
+		assert(firstPoint != -1);
 
 		// Then check if all other translated points point to the same direction as (firstPoint-pointCloud[0]) - or lie at the origin. If not, proceed to checking the 2D degenerate case. While looping, keep track of min and max dot product because if the point cloud turns out to be a line, the min and max points are its end points.
-		for (const auto& v : m_vertexData) {
-			const auto v2 = v-m_vertexData[0];
-			const T dot = v2.dotProduct(*firstPoint-m_vertexData[0]);
-			if (v2.getLengthSquared()>epsilonSquared) {
-				const T V = dot*dot/(v2.getLengthSquared()*firstPointLengthSquared);
+		for (size_t i=0;i<m_vertexData.size();i++) {
+			const auto v = m_vertexData[i]-m_vertexData[0];
+			const T dot = v.dotProduct(m_vertexData[firstPoint]-m_vertexData[0]);
+			if (v.getLengthSquared()>epsilonSquared) {
+				const T V = dot*dot/(v.getLengthSquared()*firstPointLengthSquared);
 				const T d = std::abs(V-1);
 				if (d > Epsilon) {
 					// The points do not form a line!
 					return ConvexHull<T>();
 				}
 			}
-			if (maxPoint == nullptr || dot > maxDot) {
+			if (maxPoint == -1 || dot > maxDot) {
 				maxDot = dot;
-				maxPoint = &v;
+				maxPoint = i;
 			}
-			if (minPoint == nullptr || dot < minDot) {
+			if (minPoint == -1 || dot < minDot) {
 				minDot = dot;
-				minPoint = &v;
+				minPoint = i;
 			}
 		}
 
 		// We have a degenerate 1D case. Find a third point so that we can construct an infinitely thin triangle.
 #ifdef DEBUG
-		std::cout << "Detected 1D degenerate case: the point cloud forms a line between " << *minPoint << " and " << *maxPoint << std::endl;
+		std::cout << "Detected 1D degenerate case: the point cloud forms a line between " << m_vertexData[minPoint] << " and " << m_vertexData[maxPoint] << std::endl;
 #endif
-		const Vector3<T>* thirdPoint = nullptr;
-		for (const auto& v : m_vertexData) {
-			if (&v != minPoint && &v != maxPoint) {
-				thirdPoint = &v;
+		size_t thirdPoint = -1;
+		for (size_t i=0;i<m_vertexData.size();i++) {
+			if (i != minPoint && i != maxPoint) {
+				thirdPoint = i;
 				break;
 			}
 		}
-		if (thirdPoint==nullptr) {
+		if (thirdPoint==-1) {
 			thirdPoint = minPoint;
 		}
-		ConvexHull<T> hull;
-		auto& indexBuffer = hull.getIndexBuffer();
-		auto& vertexBuffer = hull.getVertexBuffer();
-		vertexBuffer = {*minPoint,*thirdPoint,*maxPoint};
-		indexBuffer = {0,1,2};
-		return hull;
+		return ConvexHull<T>({minPoint,maxPoint,thirdPoint},m_vertexData,true,useOriginalIndices);
 	}
 
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::checkDegenerateCase2D() {
+	ConvexHull<T> QuickHull<T>::checkDegenerateCase2D(bool useOriginalIndices) {
 		// 2D degenerate case: all points lie on the same plane. Just like in the 1D case, we translate the points so that the first point is located at the origin.
 		const T epsilonSquared = m_epsilon*m_epsilon;
 
@@ -444,13 +428,12 @@ namespace quickhull {
 		std::cout << "Degenerate 2D case detected." << std::endl;
 #endif
 		std::vector<Vector3<T>> newPoints;
-		for (const auto& v : m_vertexData) {
-			newPoints.push_back(v);
-		}
+		newPoints.insert(newPoints.begin(),m_vertexData.begin(),m_vertexData.end());
 		const T M = m_epsilon/Epsilon;
 		auto extraPoint = M*cross + m_vertexData[0];
 		newPoints.push_back(extraPoint);
 
+		const auto origVertexSource = m_vertexData;
 		m_vertexData = VertexDataSource<T>(newPoints);
 		createConvexHalfEdgeMesh();
 
@@ -467,7 +450,7 @@ namespace quickhull {
 		for (auto i: disableList) {
 			m_mesh.m_faces[i].disable();
 		}
-		return ConvexHull<T>(m_mesh,newPoints, true);
+		return ConvexHull<T>(m_mesh,origVertexSource, true, useOriginalIndices);
 	}
 	
 	/*

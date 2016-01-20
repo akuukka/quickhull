@@ -29,7 +29,7 @@ namespace quickhull {
 				return from + (FloatType)dist(rng)*(to-from);
 			};
 			
-			// Test 1 : Puts N points inside unit cube. Result mesh must have exactly 8 vertices because the convex hull is the unit cube.
+			// Test 1 : Put N points inside unit cube. Result mesh must have exactly 8 vertices because the convex hull is the unit cube.
 			for (int i=0;i<8;i++) {
 				pc.emplace_back(i&1 ? -1 : 1,i&2 ? -1 : 1,i&4 ? -1 : 1);
 			}
@@ -37,8 +37,22 @@ namespace quickhull {
 			{
 				pc.emplace_back(rnd(-1,1),rnd(-1,1),rnd(-1,1));
 			}
-			auto hull = qh.getConvexHull(pc,true);
+			auto hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size()==8);
+			assert(hull.getIndexBuffer().size()==3*2*6); // 6 cube faces, 2 triangles per face, 3 indices per triangle
+			assert(&(hull.getVertexBuffer()[0])!=&(pc[0]));
+			auto hull2 = hull;
+			assert(hull2.getVertexBuffer().size()==hull.getVertexBuffer().size());
+			assert(hull2.getVertexBuffer()[0].x==hull.getVertexBuffer()[0].x);
+			assert(hull2.getIndexBuffer().size()==hull.getIndexBuffer().size());
+			auto hull3 = std::move(hull);
+			assert(hull.getIndexBuffer().size()==0);
+			
+			// Test 1.1 : Same test, but using the original indices.
+			hull = qh.getConvexHull(pc,true,true);
+			assert(hull.getIndexBuffer().size()==3*2*6);
+			assert(hull.getVertexBuffer().size()==pc.size());
+			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
 			
 			// Test 2 : random N points from the boundary of unit sphere. Result mesh must have exactly N points.
 			const FloatType pi = 3.14159f;
@@ -55,8 +69,9 @@ namespace quickhull {
 					pc.emplace_back(x,y,z);
 				}
 			}
-			hull = qh.getConvexHull(pc,true);
+			hull = qh.getConvexHull(pc,true,false);
 			assert(pc.size() == hull.getVertexBuffer().size());
+			hull = qh.getConvexHull(pc,true,true);
 			
 			// Test 3: degenerate cases
 			pc.clear();
@@ -64,13 +79,13 @@ namespace quickhull {
 			const Vector3<FloatType> b = Vector3<FloatType>(-2,4,9).getNormalized();
 			const Vector3<FloatType> c(0,0,0);
 			pc.push_back(a);
-			hull = qh.getConvexHull(pc,true);
+			hull = std::move(qh.getConvexHull(pc,true,false));
 			assert(hull.getVertexBuffer().size() == 3);
 			pc.push_back(b);
-			hull = qh.getConvexHull(pc,true);
+			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size() == 3);
 			pc.push_back(c);
-			hull = qh.getConvexHull(pc,true);
+			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size() == 3);
 			for (int i=0;i<N;i++) {
 				auto t = rnd(0.001f,0.999f);
@@ -79,8 +94,12 @@ namespace quickhull {
 				auto f = c + d + e;
 				pc.push_back(f);
 			}
-			hull = qh.getConvexHull(pc,true);
+			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size() == 3);
+			hull = qh.getConvexHull(pc,true,true);
+			assert(hull.getVertexBuffer().size() == pc.size());
+			assert(hull.getIndexBuffer().size() == 3);
+			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
 		}
 		
 	}

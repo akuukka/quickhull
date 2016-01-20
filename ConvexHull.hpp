@@ -14,18 +14,95 @@
 #include <vector>
 #include <unordered_map>
 #include <fstream>
+#include <memory>
 
 namespace quickhull {
 
 	template<typename T>
 	class ConvexHull {
-		std::vector<Vector3<T>> m_vertices;
+		std::unique_ptr<std::vector<Vector3<T>>> m_optimizedVertexBuffer;
+		VertexDataSource<T> m_vertices;
 		std::vector<size_t> m_indices;
 	public:
 		ConvexHull() {}
-
+		
+		// Copy constructor
+		ConvexHull(const ConvexHull& o) {
+			m_indices = o.m_indices;
+			if (o.m_optimizedVertexBuffer) {
+				m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>(*o.m_optimizedVertexBuffer));
+				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
+			}
+			else {
+				m_vertices = o.m_vertices;
+			}
+		}
+		
+		ConvexHull& operator=(const ConvexHull& o) {
+			if (&o == this) {
+				return *this;
+			}
+			m_indices = o.m_indices;
+			if (o.m_optimizedVertexBuffer) {
+				m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>(*o.m_optimizedVertexBuffer));
+				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
+			}
+			else {
+				m_vertices = o.m_vertices;
+			}
+			return *this;
+		}
+		
+		ConvexHull(ConvexHull&& o) {
+			m_indices = std::move(o.m_indices);
+			if (o.m_optimizedVertexBuffer) {
+				m_optimizedVertexBuffer = std::move(o.m_optimizedVertexBuffer);
+				o.m_vertices = VertexDataSource<T>();
+				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
+			}
+			else {
+				m_vertices = o.m_vertices;
+			}
+		}
+		
+		ConvexHull& operator=(ConvexHull&& o) {
+			if (&o == this) {
+				return *this;
+			}
+			m_indices = std::move(o.m_indices);
+			if (o.m_optimizedVertexBuffer) {
+				m_optimizedVertexBuffer = std::move(o.m_optimizedVertexBuffer);
+				o.m_vertices = VertexDataSource<T>();
+				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
+			}
+			else {
+				m_vertices = o.m_vertices;
+			}
+			return *this;
+		}
+		
+		// Construct a convex hull that consists of a single triangle
+		ConvexHull(std::array<size_t,3> triangleIndices, const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
+			if (!useOriginalIndices) {
+				m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>());
+				m_optimizedVertexBuffer->push_back(pointCloud[triangleIndices[0]]);
+				m_optimizedVertexBuffer->push_back(pointCloud[triangleIndices[1]]);
+				m_optimizedVertexBuffer->push_back(pointCloud[triangleIndices[2]]);
+				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
+				m_indices = {0,1,2};
+			}
+			else {
+				m_vertices = pointCloud;
+				m_indices = {triangleIndices[0],triangleIndices[1],triangleIndices[2]};
+			}
+		}
+		
 		// Construct vertex and index buffers from half edge mesh and pointcloud
-		ConvexHull(const Mesh<T>& mesh, const VertexDataSource<T>& pointCloud, bool CCW) {
+		ConvexHull(const Mesh<T>& mesh, const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
+			if (!useOriginalIndices) {
+				m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>());
+			}
+			
 			std::vector<bool> faceProcessed(mesh.m_faces.size(),false);
 			std::vector<size_t> faceStack;
 			std::unordered_map<size_t,size_t> vertexIndexMapping; // Map vertex indices from original point cloud to the new mesh vertex indices
@@ -51,6 +128,7 @@ namespace quickhull {
 					continue;
 				}
 				else {
+					faceProcessed[top]=true;
 					auto halfEdges = mesh.getHalfEdgeIndicesOfFace(mesh.m_faces[top]);
 					size_t adjacent[] = {mesh.m_halfEdges[mesh.m_halfEdges[halfEdges[0]].m_opp].m_face,mesh.m_halfEdges[mesh.m_halfEdges[halfEdges[1]].m_opp].m_face,mesh.m_halfEdges[mesh.m_halfEdges[halfEdges[2]].m_opp].m_face};
 					for (auto a : adjacent) {
@@ -59,15 +137,17 @@ namespace quickhull {
 						}
 					}
 					auto vertices = mesh.getVertexIndicesOfFace(mesh.m_faces[top]);
-					for (auto& v : vertices) {
-						auto it = vertexIndexMapping.find(v);
-						if (it == vertexIndexMapping.end()) {
-							m_vertices.push_back(pointCloud[v]);
-							vertexIndexMapping[v] = m_vertices.size()-1;
-							v = m_vertices.size()-1;
-						}
-						else {
-							v = it->second;
+					if (!useOriginalIndices) {
+						for (auto& v : vertices) {
+							auto it = vertexIndexMapping.find(v);
+							if (it == vertexIndexMapping.end()) {
+								m_optimizedVertexBuffer->push_back(pointCloud[v]);
+								vertexIndexMapping[v] = m_optimizedVertexBuffer->size()-1;
+								v = m_optimizedVertexBuffer->size()-1;
+							}
+							else {
+								v = it->second;
+							}
 						}
 					}
 					m_indices.push_back(vertices[0]);
@@ -79,8 +159,14 @@ namespace quickhull {
 						m_indices.push_back(vertices[1]);
 						m_indices.push_back(vertices[2]);
 					}
-					faceProcessed[top]=true;
 				}
+			}
+			
+			if (!useOriginalIndices) {
+				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
+			}
+			else {
+				m_vertices = pointCloud;
 			}
 		}
 
@@ -88,7 +174,7 @@ namespace quickhull {
 			return m_indices;
 		}
 
-		std::vector<Vector3<T>>& getVertexBuffer() {
+		VertexDataSource<T>& getVertexBuffer() {
 			return m_vertices;
 		}
 		

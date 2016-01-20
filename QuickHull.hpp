@@ -70,9 +70,9 @@ namespace quickhull {
 		std::vector< std::unique_ptr<std::vector<IndexType>> > m_disabledFacePointVectors;
 
 		// Detect degenerate cases
-		ConvexHull<T> checkDegenerateCase0D();
-		ConvexHull<T> checkDegenerateCase1D();
-		ConvexHull<T> checkDegenerateCase2D();
+		ConvexHull<T> checkDegenerateCase0D(bool useOriginalIndices);
+		ConvexHull<T> checkDegenerateCase1D(bool useOriginalIndices);
+		ConvexHull<T> checkDegenerateCase2D(bool useOriginalIndices);
 		
 		// Create a half edge mesh representing the base tetrahedron from which the QuickHull iteration proceeds. m_extremeValues must be properly set up when this is called.
 		Mesh<T> getInitialTetrahedron();
@@ -87,20 +87,24 @@ namespace quickhull {
 		void createConvexHalfEdgeMesh();
 		
 		// The public getConvexHull functions will setup a VertexDataSource object and call this
-		ConvexHull<T> getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW);
+		ConvexHull<T> getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices);
 	public:
 		// Computes convex hull for a given point cloud.
 		// Params:
 		//   pointCloud: a vector of of 3D points
 		//   CCW: whether the output mesh triangles should have CCW orientation
-		ConvexHull<T> getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW);
+		//   useOriginalIndices: should the output mesh use same vertex indices as the original point cloud. If this is false,
+		//      then we generate a new vertex buffer which contains only the vertices that are part of the convex hull.
+		ConvexHull<T> getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW, bool useOriginalIndices);
 		
 		// Computes convex hull for a given point cloud.
 		// Params:
 		//   vertexData: pointer to the first 3D point of the point cloud
 		//   vertexCount: number of vertices in the point cloud
 		//   CCW: whether the output mesh triangles should have CCW orientation
-		ConvexHull<T> getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW);
+		//   useOriginalIndices: should the output mesh use same vertex indices as the original point cloud. If this is false,
+		//      then we generate a new vertex buffer which contains only the vertices that are part of the convex hull.
+		ConvexHull<T> getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices);
 		
 		// Computes convex hull for a given point cloud. This function assumes that the vertex data resides in memory
 		// in the following way: x_0,y_0,z_0,x_1,y_1,z_1,...
@@ -108,7 +112,9 @@ namespace quickhull {
 		//   vertexData: pointer to the X component of the first point of the point cloud.
 		//   vertexCount: number of vertices in the point cloud
 		//   CCW: whether the output mesh triangles should have CCW orientation
-		ConvexHull<T> getConvexHull(const T* vertexData, size_t vertexCount, bool CCW);
+		//   useOriginalIndices: should the output mesh use same vertex indices as the original point cloud. If this is false,
+		//      then we generate a new vertex buffer which contains only the vertices that are part of the convex hull.
+		ConvexHull<T> getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices);
 	};
 
 }
