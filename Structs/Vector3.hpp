@@ -83,7 +83,7 @@ namespace quickhull {
 		}
 		
 		// Projection onto another vector
-		Vector3 projection(const Vector3& o) {
+		Vector3 projection(const Vector3& o) const {
 			T C = dotProduct(o)/o.getLengthSquared();
 			return o*C;
 		}
