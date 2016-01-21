@@ -82,6 +82,12 @@ namespace quickhull {
 			return x*x + y*y + z*z;
 		}
 		
+		// Projection onto another vector
+		Vector3 projection(const Vector3& o) {
+			T C = dotProduct(o)/o.getLengthSquared();
+			return o*C;
+		}
+		
 		Vector3 crossProduct (const Vector3& rhs ) {
 			T a = y * rhs.z - z * rhs.y ;
 			T b = z * rhs.x - x * rhs.z ;
