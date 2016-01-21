@@ -59,7 +59,7 @@ namespace quickhull {
 	class QuickHull {
 		static const T Epsilon;
 
-		T m_epsilon;
+		T m_epsilon, m_scale;
 		VertexDataSource<T> m_vertexData;
 		Mesh<T> m_mesh;
 		std::array<IndexType,6> m_extremeValues;
@@ -82,6 +82,13 @@ namespace quickhull {
 		
 		// Find indices of extreme values (max x, min x, max y, min y, max z, min z) for the given point cloud
 		std::array<IndexType,6> getExtremeValues();
+		
+		T getScale(std::array<IndexType,6> extremeValues) {
+			const Vector3<T> maxs(m_vertexData[extremeValues[0]].x,m_vertexData[extremeValues[2]].y,m_vertexData[extremeValues[4]].z);
+			const Vector3<T> mins(m_vertexData[extremeValues[1]].x,m_vertexData[extremeValues[3]].y,m_vertexData[extremeValues[5]].z);
+			const T scale = std::max(mins.getLength(),maxs.getLength());
+			return scale;
+		}
 
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();

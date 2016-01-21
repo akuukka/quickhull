@@ -49,12 +49,10 @@ namespace quickhull {
 
 		// Very first: find extreme values and use them to compute the scale of the point cloud.
 		m_extremeValues = getExtremeValues();
-		const Vector3<T> maxs(pointCloud[m_extremeValues[0]].x,pointCloud[m_extremeValues[2]].y,pointCloud[m_extremeValues[4]].z);
-		const Vector3<T> mins(pointCloud[m_extremeValues[1]].x,pointCloud[m_extremeValues[3]].y,pointCloud[m_extremeValues[5]].z);
-		const T scale = std::max(mins.getLength(),maxs.getLength());
+		m_scale = getScale(m_extremeValues);
 		
 		// Epsilon we use depends on the scale
-		m_epsilon = Epsilon*scale;
+		m_epsilon = Epsilon*m_scale;
 
 		// Check for degenerate cases before proceeding to the 3D quickhull iteration phase
 		std::function<ConvexHull<T>(bool)> degenerateCaseCheckers[] = {
@@ -343,18 +341,18 @@ namespace quickhull {
 		}
 		assert(firstPoint != -1);
 
-		// Then check if all other translated points point to the same direction as (firstPoint-pointCloud[0]) - or lie at the origin. If not, proceed to checking the 2D degenerate case. While looping, keep track of min and max dot product because if the point cloud turns out to be a line, the min and max points are its end points.
+		// Then check if all other translated points point to the same direction as V=(m_vertexData[firstPoint]-m_vertexData[0]) - or lie at the origin. If not, proceed to checking the 2D degenerate case. While looping, keep track of min and max dot product because if the point cloud turns out to be a line, the min and max points are its end points.
+		const auto V = m_vertexData[firstPoint]-m_vertexData[0];
 		for (size_t i=0;i<m_vertexData.size();i++) {
 			const auto v = m_vertexData[i]-m_vertexData[0];
-			const T dot = v.dotProduct(m_vertexData[firstPoint]-m_vertexData[0]);
-			if (v.getLengthSquared()>epsilonSquared) {
-				const T V = dot*dot/(v.getLengthSquared()*firstPointLengthSquared);
-				const T d = std::abs(V-1);
-				if (d > Epsilon) {
-					// The points do not form a line!
-					return ConvexHull<T>();
-				}
+			const auto proj = v.projection(V);
+			const auto ortho = v - proj;
+			const auto D = ortho.getLengthSquared();
+			if (D > epsilonSquared) {
+				// The points do not form a line!
+				return ConvexHull<T>();
 			}
+			const T dot = v.dotProduct(V);
 			if (maxPoint == -1 || dot > maxDot) {
 				maxDot = dot;
 				maxPoint = i;
@@ -386,37 +384,47 @@ namespace quickhull {
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase2D(bool useOriginalIndices) {
 		// 2D degenerate case: all points lie on the same plane. Just like in the 1D case, we translate the points so that the first point is located at the origin.
 		const T epsilonSquared = m_epsilon*m_epsilon;
+		
+		// Find first point not lying at the origo (such must exist, because we have already checked for the 0D case)
+		const Vector3<T>* firstPoint = nullptr;
+		for (size_t i=0;i<m_vertexData.size();i++) {
+			const auto v = m_vertexData[i]-m_vertexData[0];
+			if (v.getLengthSquared() > epsilonSquared) {
+				firstPoint = &m_vertexData[i];
+				break;
+			}
+		}
+		assert(firstPoint != nullptr);
 
 		// Find two points not lying at the origin and not pointing to the same direction (there must be at least two, for otherwise the 0D or 1D cases would have generated the convex hull)
-		const Vector3<T>* firstPoint = nullptr;
+		const auto V = *firstPoint-m_vertexData[0];
 		const Vector3<T>* secondPoint = nullptr;
-		T firstPointLengthSquared = 0.0f;
-		for (const auto& v : m_vertexData) {
-			const auto& vt = v-m_vertexData[0];
-			if (vt.getLengthSquared()>epsilonSquared) {
-				if (firstPoint == nullptr) {
-					firstPoint = &v;
-					firstPointLengthSquared = vt.getLengthSquared();
-					continue;
-				}
-
-				const T dot = vt.dotProduct(*firstPoint - m_vertexData[0]);
-				const T V = dot*dot/(vt.getLengthSquared()*firstPointLengthSquared);
-				const T d = std::abs(V-1);
-				if (d > Epsilon) {
-					secondPoint = &v;
-					break;
-				}
-
+		for (size_t i=0;i<m_vertexData.size();i++) {
+			const auto v = m_vertexData[i]-m_vertexData[0];
+			const auto proj = v.projection(V);
+			const auto ortho = v - proj;
+			const auto D = ortho.getLengthSquared();
+			if (D > epsilonSquared) {
+				// The points do not form a line!
+				secondPoint = &m_vertexData[i];
+				break;
 			}
 		}
 		assert(firstPoint != nullptr && secondPoint != nullptr);
 		// Now firstPoint and secondPoint define a plane. Its normal is their cross product.
-		const Vector3<T> cross = (*firstPoint-m_vertexData[0]).crossProduct(*secondPoint-m_vertexData[0]).getNormalized();
+		const auto N = mathutils::getTriangleNormal(*firstPoint,*secondPoint,m_vertexData[0]);
+		const auto P = Plane<T>(N,m_vertexData[0]);
+		const auto limit = epsilonSquared*P.m_sqrNLength;
+		if (std::isinf(limit)) {
+			throw std::runtime_error("Reached infinity. Your point cloud is too large.");
+		}
 		for (const auto& v : m_vertexData) {
-			const auto& vt = v-m_vertexData[0];
-			const T d = std::abs(vt.dotProduct(cross));
-			if (d > m_epsilon) {
+			const T D = mathutils::getSignedDistanceToPlane(v,P);
+			const auto A = D*D;
+			if (std::isinf(A)) {
+				throw std::runtime_error("Reached infinity. Your point cloud is too large.");
+			}
+			if (A > limit) {
 				// We have a proper 3D point cloud and the QuickHull algorithm can be applied.
 				return ConvexHull<T>();
 			}
@@ -429,9 +437,9 @@ namespace quickhull {
 #endif
 		std::vector<Vector3<T>> newPoints;
 		newPoints.insert(newPoints.begin(),m_vertexData.begin(),m_vertexData.end());
-		const T M = m_epsilon/Epsilon;
-		auto extraPoint = M*cross + m_vertexData[0];
+		auto extraPoint = N + m_vertexData[0];
 		newPoints.push_back(extraPoint);
+		const auto extraPointIndex = newPoints.size()-1;
 
 		const auto origVertexSource = m_vertexData;
 		m_vertexData = VertexDataSource<T>(newPoints);
@@ -442,7 +450,7 @@ namespace quickhull {
 			auto& face = m_mesh.m_faces[i];
 			if (!face.isDisabled()) {
 				auto v = m_mesh.getVertexIndicesOfFace(face);
-				if ((newPoints[v[0]]-extraPoint).getLengthSquared()<M/4 || (newPoints[v[1]]-extraPoint).getLengthSquared()<M/4 || (newPoints[v[2]]-extraPoint).getLengthSquared()<M/4) {
+				if (v[0]==extraPointIndex || v[1]==extraPointIndex || v[2]==extraPointIndex) {
 					disableList.push_back(i);
 				}
 			}

@@ -15,6 +15,21 @@ namespace quickhull {
 	
 	namespace tests {
 		
+		void testVector3() {
+			typedef float FloatType;
+			typedef Vector3<FloatType> vec3;
+			vec3 a(1,0,0);
+			vec3 b(1,0,0);
+			
+			vec3 c = a.projection(b);
+			assert( (c-a).getLength()<0.00001f);
+			
+			a = vec3(1,1,0);
+			b = vec3(1,3,0);
+			c = b.projection(a);
+			assert( (c-vec3(2,2,0)).getLength()<0.00001f);
+		}
+		
 		void run() {
 			// Setup test env
 			typedef float FloatType;
@@ -73,7 +88,19 @@ namespace quickhull {
 			assert(pc.size() == hull.getVertexBuffer().size());
 			hull = qh.getConvexHull(pc,true,true);
 			
-			// Test 3: degenerate cases
+			// Test 2.1 : Multiply x components of the unit sphere vectors by a huge number => essentially we get a line
+			const FloatType mul = 2*2*2;
+			while (true) {
+				for (auto& p : pc) {
+					p.x *= mul;
+				}
+				hull = qh.getConvexHull(pc,true,false);
+				if (hull.getVertexBuffer().size() == 3) {
+					break;
+				}
+			}
+			
+			// Test 3: 0D and 1D degenerate cases
 			pc.clear();
 			const Vector3<FloatType> a = Vector3<FloatType>(1,1,1).getNormalized();
 			const Vector3<FloatType> b = Vector3<FloatType>(-2,4,9).getNormalized();
@@ -84,6 +111,18 @@ namespace quickhull {
 			pc.push_back(b);
 			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size() == 3);
+			for (int i=0;i<N;i++) {
+				auto t = rnd(0.001f,0.999f);
+				auto d = a + (b-a)*t;
+				pc.push_back(d);
+			}
+			hull = qh.getConvexHull(pc,true,false);
+			assert(hull.getVertexBuffer().size() == 3);
+			
+			// Test 4: 2d degenerate cases
+			pc.clear();
+			pc.push_back(a);
+			pc.push_back(b);
 			pc.push_back(c);
 			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size() == 3);
@@ -100,6 +139,9 @@ namespace quickhull {
 			assert(hull.getVertexBuffer().size() == pc.size());
 			assert(hull.getIndexBuffer().size() == 3);
 			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
+			
+			// Test Vector3 class
+			testVector3();
 		}
 		
 	}
