@@ -7,6 +7,7 @@
 //
 
 #include "../QuickHull.hpp"
+#include "../MathUtils.hpp"
 #include <iostream>
 #include <random>
 #include <cassert>
@@ -15,8 +16,13 @@ namespace quickhull {
 	
 	namespace tests {
 		
+		using FloatType = float;
+		
+		void assertSameValue(FloatType a, FloatType b) {
+			assert(std::abs(a-b)<0.0001f);
+		}
+		
 		void testVector3() {
-			typedef float FloatType;
 			typedef Vector3<FloatType> vec3;
 			vec3 a(1,0,0);
 			vec3 b(1,0,0);
@@ -30,9 +36,56 @@ namespace quickhull {
 			assert( (c-vec3(2,2,0)).getLength()<0.00001f);
 		}
 		
+		template <typename T>
+		std::vector<Vector3<T>> createSphere(T radius, size_t M, Vector3<T> offset = Vector3<T>(0,0,0)) {
+			std::vector<Vector3<T>> pc;
+			const T pi = 3.14159f;
+			for (int i=0;i<=M;i++) {
+				FloatType y = std::sin(pi/2 + (FloatType)i/(M)*pi);
+				FloatType r = std::cos(pi/2 + (FloatType)i/(M)*pi);
+				FloatType K = FloatType(1)-std::abs((FloatType)((FloatType)i-M/2.0f))/(FloatType)(M/2.0f);
+				const size_t pcount = (size_t)(1 + K*M + FloatType(1)/2);
+				for (size_t j=0;j<pcount;j++) {
+					FloatType x = pcount>1 ? r*std::cos((FloatType)j/pcount*pi*2) : 0;
+					FloatType z = pcount>1 ? r*std::sin((FloatType)j/pcount*pi*2) : 0;
+					pc.emplace_back(x+offset.x,y+offset.y,z+offset.z);
+				}
+			}
+			return pc;
+		}
+		
+		void sphereTest() {
+			QuickHull<FloatType> qh;
+			FloatType y = 1;
+			for (;;) {
+				auto pc = createSphere<FloatType>(1, 100, Vector3<FloatType>(0,y,0));
+				auto hull = qh.getConvexHull(pc,true,false);
+				y *= 15;
+				y /= 10;
+				if (hull.getVertexBuffer().size()==3) {
+					break;
+				}
+			}
+		}
+		
+		void testPlanes() {
+			Vector3<FloatType> N(1,0,0);
+			Vector3<FloatType> p(2,0,0);
+			Plane<FloatType> P(N,p);
+			auto dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(3,0,0), P);
+			assertSameValue(dist,1);
+			dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(1,0,0), P);
+			assertSameValue(dist,-1);
+			dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(1,0,0), P);
+			assertSameValue(dist,-1);
+			N = Vector3<FloatType>(2,0,0);
+			P = Plane<FloatType>(N,p);
+			dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(6,0,0), P);
+			assertSameValue(dist,8);
+		}
+		
 		void run() {
 			// Setup test env
-			typedef float FloatType;
 			const size_t N = 1000;
 			std::vector<Vector3<FloatType>> pc;
 			QuickHull<FloatType> qh;
@@ -70,20 +123,7 @@ namespace quickhull {
 			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
 			
 			// Test 2 : random N points from the boundary of unit sphere. Result mesh must have exactly N points.
-			const FloatType pi = 3.14159f;
-			const int M = 450;
-			pc.clear();
-			for (int i=0;i<=M;i++) {
-				FloatType y = std::sin(pi/2 + (FloatType)i/(M)*pi);
-				FloatType r = std::cos(pi/2 + (FloatType)i/(M)*pi);
-				FloatType K = FloatType(1)-std::abs((FloatType)((FloatType)i-M/2.0f))/(FloatType)(M/2.0f);
-				const size_t pcount = (size_t)(1 + K*M + FloatType(1)/2);
-				for (size_t j=0;j<pcount;j++) {
-					FloatType x = pcount>1 ? r*std::cos((FloatType)j/pcount*pi*2) : 0;
-					FloatType z = pcount>1 ? r*std::sin((FloatType)j/pcount*pi*2) : 0;
-					pc.emplace_back(x,y,z);
-				}
-			}
+			pc = createSphere<FloatType>(1, 450);
 			hull = qh.getConvexHull(pc,true,false);
 			assert(pc.size() == hull.getVertexBuffer().size());
 			hull = qh.getConvexHull(pc,true,true);
@@ -140,9 +180,13 @@ namespace quickhull {
 			assert(hull.getIndexBuffer().size() == 3);
 			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
 			
-			// Test Vector3 class
+			// Other tests
+			testPlanes();
+			sphereTest();
 			testVector3();
 		}
+		
+
 		
 	}
 }
