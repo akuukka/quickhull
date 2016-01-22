@@ -127,6 +127,14 @@ namespace quickhull {
 			hull = qh.getConvexHull(pc,true,false);
 			assert(pc.size() == hull.getVertexBuffer().size());
 			hull = qh.getConvexHull(pc,true,true);
+			// Add every vertex twice. This should not affect final mesh
+			auto s = pc.size();
+			for (size_t i=0;i<s;i++) {
+				const auto& p = pc[i];
+				pc.push_back(p);
+			}
+			hull = qh.getConvexHull(pc,true,false);
+			assert(pc.size()/2 == hull.getVertexBuffer().size());
 			
 			// Test 2.1 : Multiply x components of the unit sphere vectors by a huge number => essentially we get a line
 			const FloatType mul = 2*2*2;
