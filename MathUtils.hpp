@@ -16,7 +16,7 @@ namespace quickhull {
 			return s.getLengthSquared() - t*t/(r.m_V.getLengthSquared());
 		}
 		
-		// Note that the unit of distance returned is relative to plane's normal's length.
+		// Note that the unit of distance returned is relative to plane's normal's length (divide by N.getNormalized() if needed to get the "real" distance).
 		template <typename T>
 		inline T getSignedDistanceToPlane(const Vector3<T>& v, const Plane<T>& p) {
 			return p.m_N.dotProduct(v) + p.m_D;
