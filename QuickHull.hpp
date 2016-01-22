@@ -83,11 +83,18 @@ namespace quickhull {
 		// Find indices of extreme values (max x, min x, max y, min y, max z, min z) for the given point cloud
 		std::array<IndexType,6> getExtremeValues();
 		
+		// Compute scale of the vertex data.
 		T getScale(std::array<IndexType,6> extremeValues) {
-			const Vector3<T> maxs(m_vertexData[extremeValues[0]].x,m_vertexData[extremeValues[2]].y,m_vertexData[extremeValues[4]].z);
-			const Vector3<T> mins(m_vertexData[extremeValues[1]].x,m_vertexData[extremeValues[3]].y,m_vertexData[extremeValues[5]].z);
-			const T scale = std::max(mins.getLength(),maxs.getLength());
-			return scale;
+			T s = 0;
+			for (size_t i=0;i<6;i++) {
+				const T* v = (const T*)(&m_vertexData[i]);
+				v += i/2;
+				auto a = std::abs(*v);
+				if (a>s) {
+					s = a;
+				}
+			}
+			return s;
 		}
 
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
