@@ -304,10 +304,11 @@ namespace quickhull {
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D(bool useOriginalIndices) {
 		// 0D degenerate case: all points are at the same location
+		const T epsilonSquared = m_epsilon*m_epsilon;
 		const Vector3<T>& v0 = *m_vertexData.begin();
 		for (const auto& v : m_vertexData) {
 			T d = (v-v0).getLengthSquared();
-			if (d>m_epsilon*m_epsilon) {
+			if (d>epsilonSquared) {
 				return ConvexHull<T>();
 			}
 		}
@@ -387,7 +388,7 @@ namespace quickhull {
 		
 		// Find first point not lying at the origo (such must exist, because we have already checked for the 0D case)
 		const Vector3<T>* firstPoint = nullptr;
-		for (size_t i=0;i<m_vertexData.size();i++) {
+		for (size_t i=1;i<m_vertexData.size();i++) {
 			const auto v = m_vertexData[i]-m_vertexData[0];
 			if (v.getLengthSquared() > epsilonSquared) {
 				firstPoint = &m_vertexData[i];
@@ -399,7 +400,7 @@ namespace quickhull {
 		// Find two points not lying at the origin and not pointing to the same direction (there must be at least two, for otherwise the 0D or 1D cases would have generated the convex hull)
 		const auto V = *firstPoint-m_vertexData[0];
 		const Vector3<T>* secondPoint = nullptr;
-		for (size_t i=0;i<m_vertexData.size();i++) {
+		for (size_t i=1;i<m_vertexData.size();i++) {
 			const auto v = m_vertexData[i]-m_vertexData[0];
 			const auto proj = v.projection(V);
 			const auto ortho = v - proj;
