@@ -9,7 +9,7 @@
 #define CONVEXHULL_HPP_
 
 #include "Structs/Vector3.hpp"
-#include "Structs/HalfEdgeMesh.hpp"
+#include "Structs/Mesh.hpp"
 #include "Structs/VertexDataSource.hpp"
 #include <vector>
 #include <unordered_map>

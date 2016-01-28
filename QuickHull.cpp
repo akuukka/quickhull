@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <deque>
 #include <limits>
-#include "Structs/HalfEdgeMesh.hpp"
+#include "Structs/Mesh.hpp"
 
 namespace quickhull {
 	

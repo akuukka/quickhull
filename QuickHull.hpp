@@ -13,7 +13,7 @@
 #include <limits>
 #include "Structs/Vector3.hpp"
 #include "Structs/Plane.hpp"
-#include "Structs/HalfEdgeMesh.hpp"
+#include "Structs/Mesh.hpp"
 #include "ConvexHull.hpp"
 
 
