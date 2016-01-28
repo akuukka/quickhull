@@ -56,6 +56,12 @@
 
 namespace quickhull {
 	
+	struct DiagnosticsData {
+		size_t m_failedHorizonEdges; // How many times QuickHull failed to solve the horizon edge. Failures lead to degenerated convex hulls.
+		
+		DiagnosticsData() : m_failedHorizonEdges(0) { }
+	};
+	
 	template<typename T>
 	class QuickHull {
 		static const T Epsilon;
@@ -64,6 +70,7 @@ namespace quickhull {
 		VertexDataSource<T> m_vertexData;
 		Mesh<T> m_mesh;
 		std::array<IndexType,6> m_extremeValues;
+		DiagnosticsData m_diagnostics;
 
 		// Temporary variables used during iteration process
 		std::vector<IndexType> m_newFaceIndices;
@@ -118,7 +125,7 @@ namespace quickhull {
 			}
 			m_indexVectorPool.reclaim(ptr);
 		}
-
+		
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();
 		
@@ -154,6 +161,11 @@ namespace quickhull {
 		//      then we generate a new vertex buffer which contains only the vertices that are part of the convex hull.
 		//   eps: minimum distance to a plane to consider a point being on positive of it (for a point cloud with scale 1)
 		ConvexHull<T> getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T eps = Epsilon);
+		
+		// Get diagnostics about last generated convex hull
+		const DiagnosticsData& getDiagnostics() {
+			return m_diagnostics;
+		}
 	};
 	
 

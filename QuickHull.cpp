@@ -53,6 +53,9 @@ namespace quickhull {
 		
 		// Epsilon we use depends on the scale
 		m_epsilon = epsilon*m_scale;
+		
+		// Reset diagnostics
+		m_diagnostics = DiagnosticsData();
 
 		// Check for degenerate cases before proceeding to the 3D quickhull iteration phase
 		std::function<ConvexHull<T>(bool)> degenerateCaseCheckers[] = {
@@ -174,6 +177,7 @@ namespace quickhull {
 
 			// Order horizon edges so that they form a loop. This may fail due to numerical instability in which case we give up trying to solve horizon edge for this point and accept a minor degeneration in the convex hull.
 			if (!reorderHorizonEdges(horizonEdges)) {
+				m_diagnostics.m_failedHorizonEdges++;
 				std::cerr << "Failed to solve horizon edge." << std::endl;
 				auto it = std::find(tf.m_pointsOnPositiveSide->begin(),tf.m_pointsOnPositiveSide->end(),activePointIndex);
 				tf.m_pointsOnPositiveSide->erase(it);
@@ -294,7 +298,6 @@ namespace quickhull {
 				}
 			}
 		}
-		
 		
 		// Cleanup
 		m_indexVectorPool.clear();
