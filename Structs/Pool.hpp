@@ -18,6 +18,9 @@ namespace quickhull {
 	class Pool {
 		std::vector<std::unique_ptr<T>> m_data;
 	public:
+		void clear() {
+			m_data.clear();
+		}
 		
 		void reclaim(std::unique_ptr<T>& ptr) {
 			m_data.push_back(std::move(ptr));

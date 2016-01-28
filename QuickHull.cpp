@@ -295,6 +295,9 @@ namespace quickhull {
 			}
 		}
 		
+		
+		// Cleanup
+		m_indexVectorPool.clear();
 	}
 	
 	/*
