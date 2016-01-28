@@ -13,6 +13,7 @@
 #include <limits>
 #include "Structs/Vector3.hpp"
 #include "Structs/Plane.hpp"
+#include "Structs/Pool.hpp"
 #include "Structs/Mesh.hpp"
 #include "ConvexHull.hpp"
 
@@ -96,12 +97,33 @@ namespace quickhull {
 			}
 			return s;
 		}
+		
+		// Each face contains a unique pointer to a vector of indices. However, many - often most - faces do not have any points on the positive
+		// side of them especially at the the end of the iteration. When a face is removed from the mesh, its associated point vector, if such
+		// exists, is moved to the index vector pool, and when we need to add new faces with points on the positive side to the mesh,
+		// we reuse these vectors. This reduces the amount of std::vectors we have to deal with, and impact on performance is remarkable.
+		Pool<std::vector<IndexType>> m_indexVectorPool;
+		
+		std::unique_ptr<std::vector<IndexType>> getIndexVectorFromPool() {
+			auto r = std::move(m_indexVectorPool.get());
+			r->clear();
+			return r;
+		}
+		
+		void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>> ptr) {
+			const size_t oldSize = ptr->size();
+			if ((oldSize+1)*128 < ptr->capacity()) {
+				// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
+				return;
+			}
+			m_indexVectorPool.reclaim(ptr);
+		}
 
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();
 		
 		// The public getConvexHull functions will setup a VertexDataSource object and call this
-		ConvexHull<T> getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices);
+		ConvexHull<T> getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T eps);
 	public:
 		// Computes convex hull for a given point cloud.
 		// Params:
@@ -109,7 +131,8 @@ namespace quickhull {
 		//   CCW: whether the output mesh triangles should have CCW orientation
 		//   useOriginalIndices: should the output mesh use same vertex indices as the original point cloud. If this is false,
 		//      then we generate a new vertex buffer which contains only the vertices that are part of the convex hull.
-		ConvexHull<T> getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW, bool useOriginalIndices);
+		//   eps: minimum distance to a plane to consider a point being on positive of it (for a point cloud with scale 1)
+		ConvexHull<T> getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW, bool useOriginalIndices, T eps = Epsilon);
 		
 		// Computes convex hull for a given point cloud.
 		// Params:
@@ -118,7 +141,8 @@ namespace quickhull {
 		//   CCW: whether the output mesh triangles should have CCW orientation
 		//   useOriginalIndices: should the output mesh use same vertex indices as the original point cloud. If this is false,
 		//      then we generate a new vertex buffer which contains only the vertices that are part of the convex hull.
-		ConvexHull<T> getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices);
+		//   eps: minimum distance to a plane to consider a point being on positive of it (for a point cloud with scale 1)
+		ConvexHull<T> getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T eps = Epsilon);
 		
 		// Computes convex hull for a given point cloud. This function assumes that the vertex data resides in memory
 		// in the following way: x_0,y_0,z_0,x_1,y_1,z_1,...
@@ -128,8 +152,11 @@ namespace quickhull {
 		//   CCW: whether the output mesh triangles should have CCW orientation
 		//   useOriginalIndices: should the output mesh use same vertex indices as the original point cloud. If this is false,
 		//      then we generate a new vertex buffer which contains only the vertices that are part of the convex hull.
-		ConvexHull<T> getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices);
+		//   eps: minimum distance to a plane to consider a point being on positive of it (for a point cloud with scale 1)
+		ConvexHull<T> getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T eps = Epsilon);
 	};
+	
+
 
 }
 

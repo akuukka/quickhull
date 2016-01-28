@@ -11,6 +11,7 @@
 #include <vector>
 #include "Vector3.hpp"
 #include "Plane.hpp"
+#include "Pool.hpp"
 #include "../Types.hpp"
 #include <string>
 #include <array>
@@ -70,32 +71,6 @@ namespace quickhull {
 		// We store the free indices in the following vectors.
 		std::vector<IndexType> m_disabledFaces,m_disabledHalfEdges;
 		
-		// Each face contains a unique pointer to a vector of indices. However, many - often most - faces do not have any points on the positive
-		// side of them especially at the the end of the iteration. When a face is removed from the mesh, its associated point vector, if such
-		// exists, is moved to the index vector pool, and when we need to add new faces with points on the positive side to the mesh,
-		// we reuse these vectors. This reduces the amount of std::vectors we have to deal with, and impact on performance is remarkable.
-		std::vector<std::unique_ptr<std::vector<IndexType>>> m_indexVectorPool;
-		
-		std::unique_ptr<std::vector<IndexType>> getIndexVectorFromPool() {
-			if (m_indexVectorPool.size()==0) {
-				return std::unique_ptr<std::vector<IndexType>>(new std::vector<IndexType>());
-			}
-			auto it = m_indexVectorPool.end()-1;
-			std::unique_ptr<std::vector<IndexType>> r = std::move(*it);
-			m_indexVectorPool.erase(it);
-			r->clear();
-			return r;
-		}
-		
-		void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>> ptr) {
-			const size_t oldSize = ptr->size();
-			if ((oldSize+1)*128 < ptr->capacity()) {
-				// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
-				return;
-			}
-			m_indexVectorPool.push_back(std::move(ptr));
-		}
-
 		IndexType addFace() {
 			if (m_disabledFaces.size()) {
 				auto it = m_disabledFaces.end()-1;

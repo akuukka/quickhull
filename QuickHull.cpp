@@ -17,31 +17,31 @@ namespace quickhull {
 	
 	template<>
 	const double QuickHull<double>::Epsilon = 0.000001;
-
+	
 	/*
 	 * Implementation of the algorithm
 	 */
 	
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW, bool useOriginalIndices) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
 		VertexDataSource<T> vertexDataSource(pointCloud);
-		return getConvexHull(vertexDataSource,CCW,useOriginalIndices);
+		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
 	
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T epsilon) {
 		VertexDataSource<T> vertexDataSource(vertexData,vertexCount);
-		return getConvexHull(vertexDataSource,CCW,useOriginalIndices);
+		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
 	
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T epsilon) {
 		VertexDataSource<T> vertexDataSource((const Vector3<T>*)vertexData,vertexCount);
-		return getConvexHull(vertexDataSource,CCW,useOriginalIndices);
+		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
 
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
+	ConvexHull<T> QuickHull<T>::getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
 		if (pointCloud.size()==0) {
 			return ConvexHull<T>();
 		}
@@ -52,7 +52,7 @@ namespace quickhull {
 		m_scale = getScale(m_extremeValues);
 		
 		// Epsilon we use depends on the scale
-		m_epsilon = Epsilon*m_scale;
+		m_epsilon = epsilon*m_scale;
 
 		// Check for degenerate cases before proceeding to the 3D quickhull iteration phase
 		std::function<ConvexHull<T>(bool)> degenerateCaseCheckers[] = {
@@ -267,7 +267,7 @@ namespace quickhull {
 						const T D = mathutils::getSignedDistanceToPlane(m_vertexData[ point ],newFace.m_P);
 						if (D>0 && D*D > epsilonSquared*newFace.m_P.m_sqrNLength) {
 							if (!newFace.m_pointsOnPositiveSide) {
-								newFace.m_pointsOnPositiveSide = std::move(m_mesh.getIndexVectorFromPool());
+								newFace.m_pointsOnPositiveSide = std::move(getIndexVectorFromPool());
 							}
 							newFace.m_pointsOnPositiveSide->push_back( point );
 							if (D > newFace.m_mostDistantPointDist) {
@@ -279,7 +279,7 @@ namespace quickhull {
 					}
 				}
 				// The points are no longer needed: we can move them to the vector pool for reuse.
-				m_mesh.reclaimToIndexVectorPool(std::move(disabledPoints));
+				reclaimToIndexVectorPool(std::move(disabledPoints));
 			}
 
 			// Increase face stack size if needed
