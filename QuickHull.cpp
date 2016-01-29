@@ -181,6 +181,9 @@ namespace quickhull {
 				std::cerr << "Failed to solve horizon edge." << std::endl;
 				auto it = std::find(tf.m_pointsOnPositiveSide->begin(),tf.m_pointsOnPositiveSide->end(),activePointIndex);
 				tf.m_pointsOnPositiveSide->erase(it);
+				if (tf.m_pointsOnPositiveSide->size()==0) {
+					reclaimToIndexVectorPool(tf.m_pointsOnPositiveSide);
+				}
 				continue;
 			}
 
@@ -283,7 +286,7 @@ namespace quickhull {
 					}
 				}
 				// The points are no longer needed: we can move them to the vector pool for reuse.
-				reclaimToIndexVectorPool(std::move(disabledPoints));
+				reclaimToIndexVectorPool(disabledPoints);
 			}
 
 			// Increase face stack size if needed

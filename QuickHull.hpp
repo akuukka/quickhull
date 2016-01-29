@@ -117,7 +117,7 @@ namespace quickhull {
 			return r;
 		}
 		
-		void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>> ptr) {
+		void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>>& ptr) {
 			const size_t oldSize = ptr->size();
 			if ((oldSize+1)*128 < ptr->capacity()) {
 				// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
