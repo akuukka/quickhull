@@ -121,6 +121,7 @@ namespace quickhull {
 			const size_t oldSize = ptr->size();
 			if ((oldSize+1)*128 < ptr->capacity()) {
 				// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
+				ptr.reset(nullptr);
 				return;
 			}
 			m_indexVectorPool.reclaim(ptr);
