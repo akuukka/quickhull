@@ -16,7 +16,7 @@ namespace quickhull {
 	const float QuickHull<float>::Epsilon = 0.00001f;
 	
 	template<>
-	const double QuickHull<double>::Epsilon = 0.000001;
+	const double QuickHull<double>::Epsilon = 0.0000001;
 	
 	/*
 	 * Implementation of the algorithm
