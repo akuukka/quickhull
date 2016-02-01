@@ -135,7 +135,6 @@ namespace quickhull {
 			horizonEdges.clear();
 			possiblyVisibleFaces.clear();
 			visibleFaces.clear();
-			tf.m_visibilityCheckedOnIteration = std::numeric_limits<size_t>::max();
 			possiblyVisibleFaces.emplace_back(topFaceIndex,std::numeric_limits<size_t>::max());
 			while (possiblyVisibleFaces.size()) {
 				auto it = (possiblyVisibleFaces.end()-1);
