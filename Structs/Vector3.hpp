@@ -102,8 +102,10 @@ namespace quickhull {
 		}
 		
 		T getSquaredDistanceTo(const Vector3& other) const {
-			Vector3 diff = *this - other;
-			return diff.getLengthSquared();
+			const T dx = x-other.x;
+			const T dy = y-other.y;
+			const T dz = z-other.z;
+			return dx*dx+dy*dy+dz*dz;
 		}
 		
 	};
