@@ -39,7 +39,7 @@ namespace quickhull {
 			size_t m_visibilityCheckedOnIteration;
 			std::uint8_t m_isVisibleFaceOnCurrentIteration : 1;
 			std::uint8_t m_inFaceStack : 1;
-			std::uint8_t m_horizonEdgesOnCurrentIteration : 3; // Bit for each half edge assigned to this face, each being 0 or 1 depending on whether the edge belong to horizon edge
+			std::uint8_t m_horizonEdgesOnCurrentIteration : 3; // Bit for each half edge assigned to this face, each being 0 or 1 depending on whether the edge belongs to horizon edge
 			std::unique_ptr<std::vector<IndexType>> m_pointsOnPositiveSide;
 
 			Face() : m_he(std::numeric_limits<IndexType>::max()),

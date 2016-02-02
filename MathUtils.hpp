@@ -11,7 +11,7 @@ namespace quickhull {
 		
 		template <typename T>
 		inline T getSquaredDistanceBetweenPointAndRay(const Vector3<T>& p, const Ray<T>& r) {
-			Vector3<T> s = (p-r.m_S);
+			const Vector3<T> s = p-r.m_S;
 			T t = s.dotProduct(r.m_V);
 			return s.getLengthSquared() - t*t/(r.m_V.getLengthSquared());
 		}

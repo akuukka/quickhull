@@ -541,7 +541,7 @@ namespace quickhull {
 				const T d = m_vertexData[ m_extremeValues[i] ].getSquaredDistanceTo( m_vertexData[ m_extremeValues[j] ] );
 				if (d > maxD) {
 					maxD=d;
-					selectedPoints=std::pair<IndexType,IndexType>(m_extremeValues[i],m_extremeValues[j]);
+					selectedPoints={m_extremeValues[i],m_extremeValues[j]};
 				}
 			}
 		}
@@ -567,7 +567,7 @@ namespace quickhull {
 		
 		// Next step is to find the 4th vertex of the tetrahedron. We naturally choose the point farthest away from the triangle plane.
 		maxD=0;
-		maxI = 0;
+		maxI=0;
 		const Vector3<T> N = mathutils::getTriangleNormal(baseTriangleVertices[0],baseTriangleVertices[1],baseTriangleVertices[2]);
 		Plane<T> trianglePlane(N,baseTriangleVertices[0]);
 		for (size_t i=0;i<vCount;i++) {
@@ -578,10 +578,9 @@ namespace quickhull {
 			}
 		}
 
-		// Now that we have the 4th point, we can create the tetrahedron
+		// Enforce CCW orientation (if user prefers clockwise orientation, swap two vertices in each triangle when final mesh is created)
 		const Plane<T> triPlane(N,baseTriangleVertices[0]);
 		if (triPlane.isPointOnPositiveSide(m_vertexData[maxI])) {
-			// Enforce CCW orientation (if user prefers clockwise orientation, swap two vertices in each triangle when final mesh is created)
 			std::swap(baseTriangle[0],baseTriangle[1]);
 		}
 
@@ -597,7 +596,7 @@ namespace quickhull {
 			f.m_P = trianglePlane;
 		}
 
-		// Finally we assign a face for each vertex outside the tetrahedron
+		// Finally we assign a face for each vertex outside the tetrahedron (vertices inside the tetrahedron have no role anymore)
 		for (size_t i=0;i<vCount;i++) {
 			for (auto& face : mesh.m_faces) {
 				const T D = mathutils::getSignedDistanceToPlane(m_vertexData[i],face.m_P);
