@@ -17,6 +17,7 @@ namespace quickhull {
 	namespace tests {
 		
 		using FloatType = float;
+		using vec3 = Vector3<FloatType>;
 		
 		void assertSameValue(FloatType a, FloatType b) {
 			assert(std::abs(a-b)<0.0001f);
@@ -87,7 +88,7 @@ namespace quickhull {
 		void run() {
 			// Setup test env
 			const size_t N = 1000;
-			std::vector<Vector3<FloatType>> pc;
+			std::vector<vec3> pc;
 			QuickHull<FloatType> qh;
 			
 			// Setup RNG
@@ -123,7 +124,7 @@ namespace quickhull {
 			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
 			
 			// Test 2 : random N points from the boundary of unit sphere. Result mesh must have exactly N points.
-			pc = createSphere<FloatType>(1, 450);
+			pc = createSphere<FloatType>(1, 100);
 			hull = qh.getConvexHull(pc,true,false);
 			assert(pc.size() == hull.getVertexBuffer().size());
 			hull = qh.getConvexHull(pc,true,true);
@@ -147,6 +148,16 @@ namespace quickhull {
 					break;
 				}
 			}
+			
+			// Test 2.5: 0D
+			pc.clear();
+			vec3 centerPoint(2,2,2);
+			pc.push_back(centerPoint);
+			for (size_t i=0;i<100;i++) {
+				auto newp = centerPoint + vec3(rnd(-0.000001f,0.000001f),rnd(-0.000001f,0.000001f),rnd(-0.000001f,0.000001f));
+				pc.push_back(newp);
+			}
+			hull = qh.getConvexHull(pc,true,false);
 			
 			// Test 3: 0D and 1D degenerate cases
 			pc.clear();

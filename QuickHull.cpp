@@ -314,16 +314,14 @@ namespace quickhull {
 		// 0D degenerate case: all points are at the same location
 		const T epsilonSquared = m_epsilon*m_epsilon;
 		const Vector3<T>& v0 = *m_vertexData.begin();
-		for (const auto& v : m_vertexData) {
-			T d = (v-v0).getLengthSquared();
-			if (d>epsilonSquared) {
-				return ConvexHull<T>();
-			}
+		const auto it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const Vector3<T>& v) { return ((v-v0).getLengthSquared())>epsilonSquared; });
+		if (it!=m_vertexData.end()) {
+			return ConvexHull<T>();
 		}
 #ifdef DEBUG
 		std::cout << "Detected 0D degenerate case: all points are at " << m_vertexData[0] << "\n";
 #endif
-		return ConvexHull<T>({0,1,2}, m_vertexData, true, useOriginalIndices);
+		return ConvexHull<T>({0,std::min((size_t)1,m_vertexData.size()),std::min((size_t)2,m_vertexData.size())}, m_vertexData, true, useOriginalIndices);
 	}
 
 	template <typename T>
