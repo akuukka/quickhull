@@ -73,13 +73,12 @@ namespace quickhull {
 		
 		IndexType addFace() {
 			if (m_disabledFaces.size()) {
-				auto it = m_disabledFaces.end()-1;
-				IndexType index = *it;
+				IndexType index = m_disabledFaces.back();
 				auto& f = m_faces[index];
 				assert(f.isDisabled());
 				assert(!f.m_pointsOnPositiveSide);
 				f.m_mostDistantPointDist = 0;
-				m_disabledFaces.erase(it);
+				m_disabledFaces.pop_back();
 				return index;
 			}
 			m_faces.emplace_back();
@@ -88,9 +87,8 @@ namespace quickhull {
 
 		IndexType addHalfEdge()	{
 			if (m_disabledHalfEdges.size()) {
-				auto it = m_disabledHalfEdges.end()-1;
-				IndexType index = *it;
-				m_disabledHalfEdges.erase(it);
+				const IndexType index = m_disabledHalfEdges.back();
+				m_disabledHalfEdges.pop_back();
 				return index;
 			}
 			m_halfEdges.emplace_back();

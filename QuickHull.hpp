@@ -16,6 +16,7 @@
 #include "Structs/Pool.hpp"
 #include "Structs/Mesh.hpp"
 #include "ConvexHull.hpp"
+#include "MathUtils.hpp"
 
 
 /*
@@ -64,9 +65,11 @@ namespace quickhull {
 	
 	template<typename T>
 	class QuickHull {
+		using vec3 = Vector3<T>;
+		
 		static const T Epsilon;
 
-		T m_epsilon, m_scale;
+		T m_epsilon, m_epsilonSquared, m_scale;
 		VertexDataSource<T> m_vertexData;
 		Mesh<T> m_mesh;
 		std::array<IndexType,6> m_extremeValues;
@@ -92,40 +95,18 @@ namespace quickhull {
 		std::array<IndexType,6> getExtremeValues();
 		
 		// Compute scale of the vertex data.
-		T getScale(std::array<IndexType,6> extremeValues) {
-			T s = 0;
-			for (size_t i=0;i<6;i++) {
-				const T* v = (const T*)(&m_vertexData[i]);
-				v += i/2;
-				auto a = std::abs(*v);
-				if (a>s) {
-					s = a;
-				}
-			}
-			return s;
-		}
+		T getScale(std::array<IndexType,6> extremeValues);
 		
 		// Each face contains a unique pointer to a vector of indices. However, many - often most - faces do not have any points on the positive
 		// side of them especially at the the end of the iteration. When a face is removed from the mesh, its associated point vector, if such
 		// exists, is moved to the index vector pool, and when we need to add new faces with points on the positive side to the mesh,
 		// we reuse these vectors. This reduces the amount of std::vectors we have to deal with, and impact on performance is remarkable.
 		Pool<std::vector<IndexType>> m_indexVectorPool;
+		inline std::unique_ptr<std::vector<IndexType>> getIndexVectorFromPool();
+		inline void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>>& ptr);
 		
-		std::unique_ptr<std::vector<IndexType>> getIndexVectorFromPool() {
-			auto r = std::move(m_indexVectorPool.get());
-			r->clear();
-			return r;
-		}
-		
-		void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>>& ptr) {
-			const size_t oldSize = ptr->size();
-			if ((oldSize+1)*128 < ptr->capacity()) {
-				// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
-				ptr.reset(nullptr);
-				return;
-			}
-			m_indexVectorPool.reclaim(ptr);
-		}
+		// Associates a point with a face if the point resides on the positive side of the plane. Returns true if the points was on the positive side.
+		inline bool addPointToFace(typename Mesh<T>::Face& f, IndexType pointIndex);
 		
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();
@@ -169,7 +150,44 @@ namespace quickhull {
 		}
 	};
 	
+	/*
+	 * Inline function definitions
+	 */
+	
+	template<typename T>
+	std::unique_ptr<std::vector<IndexType>> QuickHull<T>::getIndexVectorFromPool() {
+		auto r = std::move(m_indexVectorPool.get());
+		r->clear();
+		return r;
+	}
+	
+	template<typename T>
+	void QuickHull<T>::reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>>& ptr) {
+		const size_t oldSize = ptr->size();
+		if ((oldSize+1)*128 < ptr->capacity()) {
+			// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
+			ptr.reset(nullptr);
+			return;
+		}
+		m_indexVectorPool.reclaim(ptr);
+	}
 
+	template<typename T>
+	bool QuickHull<T>::addPointToFace(typename Mesh<T>::Face& f, IndexType pointIndex) {
+		const T D = mathutils::getSignedDistanceToPlane(m_vertexData[ pointIndex ],f.m_P);
+		if (D>0 && D*D > m_epsilonSquared*f.m_P.m_sqrNLength) {
+			if (!f.m_pointsOnPositiveSide) {
+				f.m_pointsOnPositiveSide = std::move(getIndexVectorFromPool());
+			}
+			f.m_pointsOnPositiveSide->push_back( pointIndex );
+			if (D > f.m_mostDistantPointDist) {
+				f.m_mostDistantPointDist = D;
+				f.m_mostDistantPoint = pointIndex;
+			}
+			return true;
+		}
+		return false;
+	}
 
 }
 

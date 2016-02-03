@@ -53,6 +53,7 @@ namespace quickhull {
 		
 		// Epsilon we use depends on the scale
 		m_epsilon = epsilon*m_scale;
+		m_epsilonSquared = m_epsilon*m_epsilon;
 		
 		// Reset diagnostics
 		m_diagnostics = DiagnosticsData();
@@ -76,8 +77,6 @@ namespace quickhull {
 
 	template<typename T>
 	void QuickHull<T>::createConvexHalfEdgeMesh() {
-		const T epsilonSquared = m_epsilon*m_epsilon;
-		
 		// Temporary variables used during iteration
 		std::vector<IndexType> visibleFaces;
 		std::vector<IndexType> horizonEdges;
@@ -115,9 +114,8 @@ namespace quickhull {
 				iter = 0;
 			}
 			
-			auto faceIter = faceList.begin();
-			const IndexType topFaceIndex = *faceIter;
-			faceList.erase(faceIter);
+			const IndexType topFaceIndex = faceList.front();
+			faceList.pop_front();
 			
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
@@ -269,17 +267,7 @@ namespace quickhull {
 						continue;
 					}
 					for (size_t j=0;j<horizonEdgeCount;j++) {
-						auto& newFace = m_mesh.m_faces[m_newFaceIndices[j]];
-						const T D = mathutils::getSignedDistanceToPlane(m_vertexData[ point ],newFace.m_P);
-						if (D>0 && D*D > epsilonSquared*newFace.m_P.m_sqrNLength) {
-							if (!newFace.m_pointsOnPositiveSide) {
-								newFace.m_pointsOnPositiveSide = std::move(getIndexVectorFromPool());
-							}
-							newFace.m_pointsOnPositiveSide->push_back( point );
-							if (D > newFace.m_mostDistantPointDist) {
-								newFace.m_mostDistantPointDist = D;
-								newFace.m_mostDistantPoint = point;
-							}
+						if (addPointToFace(m_mesh.m_faces[m_newFaceIndices[j]], point)) {
 							break;
 						}
 					}
@@ -312,9 +300,8 @@ namespace quickhull {
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D(bool useOriginalIndices) {
 		// 0D degenerate case: all points are at the same location
-		const T epsilonSquared = m_epsilon*m_epsilon;
 		const Vector3<T>& v0 = *m_vertexData.begin();
-		const auto it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const Vector3<T>& v) { return ((v-v0).getLengthSquared())>epsilonSquared; });
+		const auto it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const Vector3<T>& v) { return ((v-v0).getLengthSquared())>m_epsilonSquared; });
 		if (it!=m_vertexData.end()) {
 			return ConvexHull<T>();
 		}
@@ -327,26 +314,15 @@ namespace quickhull {
 	template <typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase1D(bool useOriginalIndices) {
 		// 1D degenerate case: the points form a line in 3D space. To keep things simple, we translate the points so that the first point resides at the origin. This way, if the points do actually form a line, we have a line passing through the origin.
-		size_t firstPoint = -1;
-		T firstPointLengthSquared=0;
 		size_t maxPoint = -1;
 		size_t minPoint = -1;
-		const T epsilonSquared = m_epsilon*m_epsilon;
-		T maxDot = -1.0f;
-		T minDot = 1.0f;
+		T maxDot = -1;
+		T minDot = 1;
 
 		// First find a point which does not reside at the origin. Such a point exists, for otherwise we would have the 0D case.
-		for (size_t i=0;i<m_vertexData.size();i++) {
-			const auto v = m_vertexData[i]-m_vertexData[0];
-			if (firstPoint == -1) {
-				if (v.getLengthSquared() > epsilonSquared) {
-					firstPoint = i;
-					firstPointLengthSquared = v.getLengthSquared();
-					break;
-				}
-			}
-		}
-		assert(firstPoint != -1);
+		size_t firstPoint = std::distance(m_vertexData.begin(), std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) {
+			return v.getSquaredDistanceTo(m_vertexData[0]) > m_epsilonSquared;
+		}));
 
 		// Then check if all other translated points point to the same direction as V=(m_vertexData[firstPoint]-m_vertexData[0]) - or lie at the origin. If not, proceed to checking the 2D degenerate case. While looping, keep track of min and max dot product because if the point cloud turns out to be a line, the min and max points are its end points.
 		const auto V = m_vertexData[firstPoint]-m_vertexData[0];
@@ -355,7 +331,7 @@ namespace quickhull {
 			const auto proj = v.projection(V);
 			const auto ortho = v - proj;
 			const auto D = ortho.getLengthSquared();
-			if (D > epsilonSquared) {
+			if (D > m_epsilonSquared) {
 				// The points do not form a line!
 				return ConvexHull<T>();
 			}
@@ -390,38 +366,21 @@ namespace quickhull {
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase2D(bool useOriginalIndices) {
 		// 2D degenerate case: all points lie on the same plane. Just like in the 1D case, we translate the points so that the first point is located at the origin.
-		const T epsilonSquared = m_epsilon*m_epsilon;
 		
 		// Find first point not lying at the origo (such must exist, because we have already checked for the 0D case)
-		const Vector3<T>* firstPoint = nullptr;
-		for (size_t i=1;i<m_vertexData.size();i++) {
-			const auto v = m_vertexData[i]-m_vertexData[0];
-			if (v.getLengthSquared() > epsilonSquared) {
-				firstPoint = &m_vertexData[i];
-				break;
-			}
-		}
-		assert(firstPoint != nullptr);
+		const vec3 firstPoint = *std::find_if(m_vertexData.begin()+1, m_vertexData.end(), [&](const Vector3<T>& v) { return (v.getSquaredDistanceTo(m_vertexData[0]) > m_epsilonSquared); });
 
-		// Find two points not lying at the origin and not pointing to the same direction (there must be at least two, for otherwise the 0D or 1D cases would have generated the convex hull)
-		const auto V = *firstPoint-m_vertexData[0];
-		const Vector3<T>* secondPoint = nullptr;
-		for (size_t i=1;i<m_vertexData.size();i++) {
-			const auto v = m_vertexData[i]-m_vertexData[0];
-			const auto proj = v.projection(V);
-			const auto ortho = v - proj;
-			const auto D = ortho.getLengthSquared();
-			if (D > epsilonSquared) {
-				// The points do not form a line!
-				secondPoint = &m_vertexData[i];
-				break;
-			}
-		}
-		assert(firstPoint != nullptr && secondPoint != nullptr);
+		// Find a second point not lying at the origo and not pointing to the same direction as the firstPoint (there has to be such point because we have passed the 1D case test)
+		const auto V = firstPoint-m_vertexData[0];
+		const vec3 secondPoint = *std::find_if(m_vertexData.begin()+1, m_vertexData.end(), [&](const Vector3<T>& v1) {
+			const auto v = v1-m_vertexData[0];
+			return (v.getSquaredDistanceTo(v.projection(V)) > m_epsilonSquared);
+		});
+		
 		// Now firstPoint and secondPoint define a plane. Its normal is their cross product.
-		const auto N = mathutils::getTriangleNormal(*firstPoint,*secondPoint,m_vertexData[0]);
+		const auto N = mathutils::getTriangleNormal(firstPoint,secondPoint,m_vertexData[0]);
 		const auto P = Plane<T>(N,m_vertexData[0]);
-		const auto limit = epsilonSquared*P.m_sqrNLength;
+		const auto limit = m_epsilonSquared*P.m_sqrNLength;
 		if (std::isinf(limit)) {
 			throw std::runtime_error("Reached infinity. Your point cloud is too large.");
 		}
@@ -528,11 +487,23 @@ namespace quickhull {
 		assert(m_mesh.m_halfEdges[ horizonEdges[horizonEdges.size()-1] ].m_endVertex == m_mesh.m_halfEdges[ m_mesh.m_halfEdges[horizonEdges[0]].m_opp ].m_endVertex);
 		return true;
 	}
+	
+	template <typename T>
+	T QuickHull<T>::getScale(std::array<IndexType,6> extremeValues) {
+		T s = 0;
+		for (size_t i=0;i<6;i++) {
+			const T* v = (const T*)(&m_vertexData[i]);
+			v += i/2;
+			auto a = std::abs(*v);
+			if (a>s) {
+				s = a;
+			}
+		}
+		return s;
+	}
 
 	template <typename T>
 	Mesh<T> QuickHull<T>::getInitialTetrahedron() {
-		const T epsilonSquared = m_epsilon*m_epsilon;
-
 		// Find two most distant extreme points.
 		T maxD = 0;
 		std::pair<IndexType,IndexType> selectedPoints;
@@ -599,16 +570,7 @@ namespace quickhull {
 		// Finally we assign a face for each vertex outside the tetrahedron (vertices inside the tetrahedron have no role anymore)
 		for (size_t i=0;i<vCount;i++) {
 			for (auto& face : mesh.m_faces) {
-				const T D = mathutils::getSignedDistanceToPlane(m_vertexData[i],face.m_P);
-				if (D>0 && D*D > epsilonSquared*face.m_P.m_sqrNLength) {
-					if (!face.m_pointsOnPositiveSide) {
-						face.m_pointsOnPositiveSide.reset(new std::vector<IndexType>());
-					}
-					face.m_pointsOnPositiveSide->push_back(i);
-					if (D > face.m_mostDistantPointDist) {
-						face.m_mostDistantPointDist = D;
-						face.m_mostDistantPoint = i;
-					}
+				if (addPointToFace(face, i)) {
 					break;
 				}
 			}
