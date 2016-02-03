@@ -299,9 +299,7 @@ namespace quickhull {
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D(bool useOriginalIndices) {
 		// 0D degenerate case: all points are at the same location
-		const Vector3<T>& v0 = *m_vertexData.begin();
-		const auto it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) { return ((v-v0).getLengthSquared())>m_epsilonSquared; });
-		if (it!=m_vertexData.end()) {
+		if (std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) { return v.getSquaredDistanceTo(m_vertexData[0])>m_epsilonSquared; }) !=m_vertexData.end()) {
 			return ConvexHull<T>();
 		}
 #ifdef DEBUG
@@ -319,7 +317,7 @@ namespace quickhull {
 		T minDot = 1;
 
 		// First find a point which does not reside at the origin. Such a point exists, for otherwise we would have the 0D case.
-		size_t firstPoint = std::distance(m_vertexData.begin(), std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) {
+		const size_t firstPoint = std::distance(m_vertexData.begin(), std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) {
 			return v.getSquaredDistanceTo(m_vertexData[0]) > m_epsilonSquared;
 		}));
 
