@@ -36,7 +36,7 @@ namespace quickhull {
 	
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T epsilon) {
-		VertexDataSource<T> vertexDataSource((const Vector3<T>*)vertexData,vertexCount);
+		VertexDataSource<T> vertexDataSource((const vec3*)vertexData,vertexCount);
 		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
 
@@ -126,7 +126,7 @@ namespace quickhull {
 			}
 			
 			// Pick the most distant point to this triangle plane as the point to which we extrude
-			const Vector3<T>& activePoint = m_vertexData[tf.m_mostDistantPoint];
+			const vec3& activePoint = m_vertexData[tf.m_mostDistantPoint];
 			const size_t activePointIndex = tf.m_mostDistantPoint;
 
 			// Find out the faces that have our active point on their positive side (these are the "visible faces"). The face on top of the stack of course is one of them. At the same time, we create a list of horizon edges.
@@ -135,9 +135,8 @@ namespace quickhull {
 			visibleFaces.clear();
 			possiblyVisibleFaces.emplace_back(topFaceIndex,std::numeric_limits<size_t>::max());
 			while (possiblyVisibleFaces.size()) {
-				auto it = (possiblyVisibleFaces.end()-1);
-				const auto& faceData = *it;
-				possiblyVisibleFaces.erase(it);
+				const auto& faceData = possiblyVisibleFaces.back();
+				possiblyVisibleFaces.pop_back();
 				auto& pvf = m_mesh.m_faces[faceData.m_faceIndex];
 				assert(!pvf.isDisabled());
 				
@@ -145,9 +144,9 @@ namespace quickhull {
 					continue;
 				}
 				else {
-					Plane<T>& P = pvf.m_P;
+					const Plane<T>& P = pvf.m_P;
 					pvf.m_visibilityCheckedOnIteration = iter;
-					T d = P.m_N.dotProduct(activePoint)+P.m_D;
+					const T d = P.m_N.dotProduct(activePoint)+P.m_D;
 					if (d>=0) {
 						pvf.m_isVisibleFaceOnCurrentIteration = 1;
 						pvf.m_horizonEdgesOnCurrentIteration = 0;
@@ -301,7 +300,7 @@ namespace quickhull {
 	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D(bool useOriginalIndices) {
 		// 0D degenerate case: all points are at the same location
 		const Vector3<T>& v0 = *m_vertexData.begin();
-		const auto it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const Vector3<T>& v) { return ((v-v0).getLengthSquared())>m_epsilonSquared; });
+		const auto it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) { return ((v-v0).getLengthSquared())>m_epsilonSquared; });
 		if (it!=m_vertexData.end()) {
 			return ConvexHull<T>();
 		}
@@ -378,9 +377,9 @@ namespace quickhull {
 		});
 		
 		// Now firstPoint and secondPoint define a plane. Its normal is their cross product.
-		const auto N = mathutils::getTriangleNormal(firstPoint,secondPoint,m_vertexData[0]);
-		const auto P = Plane<T>(N,m_vertexData[0]);
-		const auto limit = m_epsilonSquared*P.m_sqrNLength;
+		const vec3 N = mathutils::getTriangleNormal(firstPoint,secondPoint,m_vertexData[0]);
+		const Plane<T> P = Plane<T>(N,m_vertexData[0]);
+		const T limit = m_epsilonSquared*P.m_sqrNLength;
 		if (std::isinf(limit)) {
 			throw std::runtime_error("Reached infinity. Your point cloud is too large.");
 		}
@@ -401,7 +400,7 @@ namespace quickhull {
 #ifdef DEBUG
 		std::cout << "Degenerate 2D case detected." << std::endl;
 #endif
-		std::vector<Vector3<T>> newPoints;
+		std::vector<vec3> newPoints;
 		newPoints.insert(newPoints.begin(),m_vertexData.begin(),m_vertexData.end());
 		auto extraPoint = N + m_vertexData[0];
 		newPoints.push_back(extraPoint);
@@ -489,10 +488,10 @@ namespace quickhull {
 	}
 	
 	template <typename T>
-	T QuickHull<T>::getScale(std::array<IndexType,6> extremeValues) {
+	T QuickHull<T>::getScale(const std::array<IndexType,6>& extremeValues) {
 		T s = 0;
 		for (size_t i=0;i<6;i++) {
-			const T* v = (const T*)(&m_vertexData[i]);
+			const T* v = (const T*)(&m_vertexData[extremeValues[i]]);
 			v += i/2;
 			auto a = std::abs(*v);
 			if (a>s) {

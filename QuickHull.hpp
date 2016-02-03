@@ -95,7 +95,7 @@ namespace quickhull {
 		std::array<IndexType,6> getExtremeValues();
 		
 		// Compute scale of the vertex data.
-		T getScale(std::array<IndexType,6> extremeValues);
+		T getScale(const std::array<IndexType,6>& extremeValues);
 		
 		// Each face contains a unique pointer to a vector of indices. However, many - often most - faces do not have any points on the positive
 		// side of them especially at the the end of the iteration. When a face is removed from the mesh, its associated point vector, if such
