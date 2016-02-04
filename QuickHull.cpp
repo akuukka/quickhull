@@ -111,9 +111,6 @@ namespace quickhull {
 				f.m_inFaceStack = 1;
 			}
 		}
-		if (faceList.empty()) {
-			return;
-		}
 
 		// Process faces until the face list is empty.
 		size_t iter = 0;
