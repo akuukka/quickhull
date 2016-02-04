@@ -13,7 +13,7 @@
 namespace quickhull {
 	
 	template<>
-	const float QuickHull<float>::Epsilon = 0.00001f;
+	const float QuickHull<float>::Epsilon = 0.0001f;
 	
 	template<>
 	const double QuickHull<double>::Epsilon = 0.0000001;
@@ -46,7 +46,7 @@ namespace quickhull {
 			return ConvexHull<T>();
 		}
 		m_vertexData = pointCloud;
-
+		
 		// Very first: find extreme values and use them to compute the scale of the point cloud.
 		m_extremeValues = getExtremeValues();
 		m_scale = getScale(m_extremeValues);
@@ -57,21 +57,28 @@ namespace quickhull {
 		
 		// Reset diagnostics
 		m_diagnostics = DiagnosticsData();
-
-		// Check for degenerate cases before proceeding to the 3D quickhull iteration phase
-		std::function<ConvexHull<T>(bool)> degenerateCaseCheckers[] = {
-			std::bind(&QuickHull<T>::checkDegenerateCase0D,this,std::placeholders::_1),
-			std::bind(&QuickHull<T>::checkDegenerateCase1D,this,std::placeholders::_1),
-			std::bind(&QuickHull<T>::checkDegenerateCase2D,this,std::placeholders::_1)
-		};
-		for (auto& f : degenerateCaseCheckers) {
-			auto degenerateHull = f(useOriginalIndices);
-			if (degenerateHull.getVertexBuffer().size()) {
-				return degenerateHull;
-			}
-		}
 		
+		m_planar = false; // The planar case happens when all the points appear to lie on a two dimensional subspace of R^3.
 		createConvexHalfEdgeMesh();
+		if (m_planar) {
+			// Disable all faces connected to the extra point we added (final mesh will be planar)
+			const size_t extraPointIndex = m_planarPointCloudTemp.size()-1;
+			std::vector<size_t> disableList;
+			for (size_t i = 0; i< m_mesh.m_faces.size();i++) {
+				auto& face = m_mesh.m_faces[i];
+				if (!face.isDisabled()) {
+					auto v = m_mesh.getVertexIndicesOfFace(face);
+					if (v[0]==extraPointIndex || v[1]==extraPointIndex || v[2]==extraPointIndex) {
+						disableList.push_back(i);
+					}
+				}
+			}
+			for (auto i: disableList) {
+				m_mesh.m_faces[i].disable();
+			}
+			m_vertexData = pointCloud;
+			m_planarPointCloudTemp.clear();
+		}
 		return ConvexHull<T>(m_mesh,m_vertexData, CCW, useOriginalIndices);
 	}
 
@@ -89,7 +96,11 @@ namespace quickhull {
 
 		// Compute base tetrahedron
 		m_mesh = getInitialTetrahedron();
-		assert(m_mesh.m_faces.size()==4);
+		assert(m_mesh.m_faces.size()==1 || m_mesh.m_faces.size()==4);
+		if (m_mesh.m_faces.size()==1) {
+			// A degenerate case
+			return;
+		}
 
 		// Init face stack with those faces that have points assigned to them
 		std::deque<IndexType> faceList;
@@ -147,7 +158,7 @@ namespace quickhull {
 					const Plane<T>& P = pvf.m_P;
 					pvf.m_visibilityCheckedOnIteration = iter;
 					const T d = P.m_N.dotProduct(activePoint)+P.m_D;
-					if (d>=0) {
+					if (d>0) {
 						pvf.m_isVisibleFaceOnCurrentIteration = 1;
 						pvf.m_horizonEdgesOnCurrentIteration = 0;
 						visibleFaces.push_back(faceData.m_faceIndex);
@@ -293,138 +304,6 @@ namespace quickhull {
 	}
 	
 	/*
-	 * Implementations of degenerate case handler functions
-	 */
-	 
-	template<typename T>
-	ConvexHull<T> QuickHull<T>::checkDegenerateCase0D(bool useOriginalIndices) {
-		// 0D degenerate case: all points are at the same location
-		if (std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) { return v.getSquaredDistanceTo(m_vertexData[0])>m_epsilonSquared; }) !=m_vertexData.end()) {
-			return ConvexHull<T>();
-		}
-#ifdef DEBUG
-		std::cout << "Detected 0D degenerate case: all points are at " << m_vertexData[0] << "\n";
-#endif
-		return ConvexHull<T>({0,std::min((size_t)1,m_vertexData.size()),std::min((size_t)2,m_vertexData.size())}, m_vertexData, true, useOriginalIndices);
-	}
-
-	template <typename T>
-	ConvexHull<T> QuickHull<T>::checkDegenerateCase1D(bool useOriginalIndices) {
-		// 1D degenerate case: the points form a line in 3D space. To keep things simple, we translate the points so that the first point resides at the origin. This way, if the points do actually form a line, we have a line passing through the origin.
-		size_t maxPoint = -1;
-		size_t minPoint = -1;
-		T maxDot = -1;
-		T minDot = 1;
-
-		// First find a point which does not reside at the origin. Such a point exists, for otherwise we would have the 0D case.
-		const size_t firstPoint = std::distance(m_vertexData.begin(), std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& v) {
-			return v.getSquaredDistanceTo(m_vertexData[0]) > m_epsilonSquared;
-		}));
-
-		// Then check if all other translated points point to the same direction as V=(m_vertexData[firstPoint]-m_vertexData[0]) - or lie at the origin. If not, proceed to checking the 2D degenerate case. While looping, keep track of min and max dot product because if the point cloud turns out to be a line, the min and max points are its end points.
-		const auto V = m_vertexData[firstPoint]-m_vertexData[0];
-		for (size_t i=0;i<m_vertexData.size();i++) {
-			const auto v = m_vertexData[i]-m_vertexData[0];
-			const auto proj = v.projection(V);
-			const auto ortho = v - proj;
-			const auto D = ortho.getLengthSquared();
-			if (D > m_epsilonSquared) {
-				// The points do not form a line!
-				return ConvexHull<T>();
-			}
-			const T dot = v.dotProduct(V);
-			if (maxPoint == -1 || dot > maxDot) {
-				maxDot = dot;
-				maxPoint = i;
-			}
-			if (minPoint == -1 || dot < minDot) {
-				minDot = dot;
-				minPoint = i;
-			}
-		}
-
-		// We have a degenerate 1D case. Find a third point so that we can construct an infinitely thin triangle.
-#ifdef DEBUG
-		std::cout << "Detected 1D degenerate case: the point cloud forms a line between " << m_vertexData[minPoint] << " and " << m_vertexData[maxPoint] << std::endl;
-#endif
-		size_t thirdPoint = -1;
-		for (size_t i=0;i<m_vertexData.size();i++) {
-			if (i != minPoint && i != maxPoint) {
-				thirdPoint = i;
-				break;
-			}
-		}
-		if (thirdPoint==-1) {
-			thirdPoint = minPoint;
-		}
-		return ConvexHull<T>({minPoint,maxPoint,thirdPoint},m_vertexData,true,useOriginalIndices);
-	}
-
-	template<typename T>
-	ConvexHull<T> QuickHull<T>::checkDegenerateCase2D(bool useOriginalIndices) {
-		// 2D degenerate case: all points lie on the same plane. Just like in the 1D case, we translate the points so that the first point is located at the origin.
-		
-		// Find first point not lying at the origo (such must exist, because we have already checked for the 0D case)
-		const vec3 firstPoint = *std::find_if(m_vertexData.begin()+1, m_vertexData.end(), [&](const Vector3<T>& v) { return (v.getSquaredDistanceTo(m_vertexData[0]) > m_epsilonSquared); });
-
-		// Find a second point not lying at the origo and not pointing to the same direction as the firstPoint (there has to be such point because we have passed the 1D case test)
-		const auto V = firstPoint-m_vertexData[0];
-		const vec3 secondPoint = *std::find_if(m_vertexData.begin()+1, m_vertexData.end(), [&](const Vector3<T>& v1) {
-			const auto v = v1-m_vertexData[0];
-			return (v.getSquaredDistanceTo(v.projection(V)) > m_epsilonSquared);
-		});
-		
-		// Now firstPoint and secondPoint define a plane. Its normal is their cross product.
-		const vec3 N = mathutils::getTriangleNormal(firstPoint,secondPoint,m_vertexData[0]);
-		const Plane<T> P = Plane<T>(N,m_vertexData[0]);
-		const T limit = m_epsilonSquared*P.m_sqrNLength;
-		if (std::isinf(limit)) {
-			throw std::runtime_error("Reached infinity. Your point cloud is too large.");
-		}
-		for (const auto& v : m_vertexData) {
-			const T D = mathutils::getSignedDistanceToPlane(v,P);
-			const auto A = D*D;
-			if (std::isinf(A)) {
-				throw std::runtime_error("Reached infinity. Your point cloud is too large.");
-			}
-			if (A > limit) {
-				// We have a proper 3D point cloud and the QuickHull algorithm can be applied.
-				return ConvexHull<T>();
-			}
-		}
-
-		// We have encountered the degenerate 2D case. We solve the problem by adding one extra point to the cloud so that we have a shape with volume, then applying the 3D QuickHull, and finally removing faces connected to the extra point.
-		// TODO: implement proper 2D QuickHull, because this solution is not good performance-wise.
-#ifdef DEBUG
-		std::cout << "Degenerate 2D case detected." << std::endl;
-#endif
-		std::vector<vec3> newPoints;
-		newPoints.insert(newPoints.begin(),m_vertexData.begin(),m_vertexData.end());
-		auto extraPoint = N + m_vertexData[0];
-		newPoints.push_back(extraPoint);
-		const auto extraPointIndex = newPoints.size()-1;
-
-		const auto origVertexSource = m_vertexData;
-		m_vertexData = VertexDataSource<T>(newPoints);
-		createConvexHalfEdgeMesh();
-
-		std::vector<size_t> disableList;
-		for (size_t i = 0; i< m_mesh.m_faces.size();i++) {
-			auto& face = m_mesh.m_faces[i];
-			if (!face.isDisabled()) {
-				auto v = m_mesh.getVertexIndicesOfFace(face);
-				if (v[0]==extraPointIndex || v[1]==extraPointIndex || v[2]==extraPointIndex) {
-					disableList.push_back(i);
-				}
-			}
-		}
-		for (auto i: disableList) {
-			m_mesh.m_faces[i].disable();
-		}
-		return ConvexHull<T>(m_mesh,origVertexSource, true, useOriginalIndices);
-	}
-	
-	/*
 	 * Private helper functions
 	 */
 
@@ -502,7 +381,7 @@ namespace quickhull {
 	template <typename T>
 	Mesh<T> QuickHull<T>::getInitialTetrahedron() {
 		// Find two most distant extreme points.
-		T maxD = 0;
+		T maxD = m_epsilonSquared;
 		std::pair<IndexType,IndexType> selectedPoints;
 		for (size_t i=0;i<6;i++) {
 			for (size_t j=i+1;j<6;j++) {
@@ -513,11 +392,15 @@ namespace quickhull {
 				}
 			}
 		}
-		assert(maxD > 0);
+		if (maxD == m_epsilonSquared) {
+			// A degenerate case: the point cloud seems to consists of a single point
+			return Mesh<T>(0,0,0);
+		}
+		assert(selectedPoints.first != selectedPoints.second);
 		
 		// Find the most distant point to the line between the two chosen extreme points.
 		const Ray<T> r(m_vertexData[selectedPoints.first], (m_vertexData[selectedPoints.second] - m_vertexData[selectedPoints.first]));
-		maxD=0;
+		maxD = m_epsilonSquared;
 		size_t maxI=std::numeric_limits<size_t>::max();
 		const size_t vCount = m_vertexData.size();
 		for (size_t i=0;i<vCount;i++) {
@@ -527,14 +410,23 @@ namespace quickhull {
 				maxI=i;
 			}
 		}
-		assert(maxI!=std::numeric_limits<IndexType>::max());
+		if (maxD == m_epsilonSquared) {
+			// It appears that the point cloud belongs to a 1 dimensional subspace of R^3: convex hull has no volume => return a thin triangle
+			// Pick any point other than selectedPoints.first and selectedPoints.second as the third point of the triangle
+			auto it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& ve) {
+				return ve != m_vertexData[selectedPoints.first] && ve != m_vertexData[selectedPoints.second];
+			});
+			const IndexType thirdPoint = (it == m_vertexData.end()) ? selectedPoints.first : std::distance(m_vertexData.begin(),it);
+			return Mesh<T>(selectedPoints.first,selectedPoints.second,thirdPoint);
+		}
 
 		// These three points form the base triangle for our tetrahedron.
-		std::array<IndexType,3> baseTriangle{selectedPoints.first, selectedPoints.second, maxI};
+		assert(selectedPoints.first != maxI && selectedPoints.second != maxI);
+		std::array<size_t,3> baseTriangle{selectedPoints.first, selectedPoints.second, maxI};
 		const Vector3<T> baseTriangleVertices[]={ m_vertexData[baseTriangle[0]], m_vertexData[baseTriangle[1]],  m_vertexData[baseTriangle[2]] };
 		
 		// Next step is to find the 4th vertex of the tetrahedron. We naturally choose the point farthest away from the triangle plane.
-		maxD=0;
+		maxD=m_epsilon;
 		maxI=0;
 		const Vector3<T> N = mathutils::getTriangleNormal(baseTriangleVertices[0],baseTriangleVertices[1],baseTriangleVertices[2]);
 		Plane<T> trianglePlane(N,baseTriangleVertices[0]);
@@ -544,6 +436,18 @@ namespace quickhull {
 				maxD=d;
 				maxI=i;
 			}
+		}
+		if (maxD == m_epsilon) {
+			// All the points seem to lie on a 2D subspace of R^3. How to handle this? Well, let's one extra point to the point cloud so that the
+			// hull will have volume.
+			m_planar = true;
+			const vec3 N = mathutils::getTriangleNormal(baseTriangleVertices[1],baseTriangleVertices[2],baseTriangleVertices[0]);
+			m_planarPointCloudTemp.clear();
+			m_planarPointCloudTemp.insert(m_planarPointCloudTemp.begin(),m_vertexData.begin(),m_vertexData.end());
+			const vec3 extraPoint = N + m_vertexData[0];
+			m_planarPointCloudTemp.push_back(extraPoint);
+			maxI = m_planarPointCloudTemp.size()-1;
+			m_vertexData = VertexDataSource<T>(m_planarPointCloudTemp);
 		}
 
 		// Enforce CCW orientation (if user prefers clockwise orientation, swap two vertices in each triangle when final mesh is created)

@@ -64,22 +64,34 @@ namespace quickhull {
 			z*=c;
 			return *this;
 		}
+		
 		Vector3& operator/=(T c) {
 			x/=c;
 			y/=c;
 			z/=c;
 			return *this;
 		}
+		
 		Vector3 operator-() const {
 			return Vector3(-x,-y,-z);
 		}
 
-		Vector3 operator*(T c) const {
+		template<typename S>
+		Vector3 operator*(S c) const {
 			return Vector3(x*c,y*c,z*c);
+		}
+		
+		template<typename S>
+		Vector3 operator/(S c) const {
+			return Vector3(x/c,y/c,z/c);
 		}
 		
 		T getLengthSquared() const {
 			return x*x + y*y + z*z;
+		}
+		
+		bool operator!=(const Vector3& o) const {
+			return x != o.x || y != o.y || z != o.z;
 		}
 		
 		// Projection onto another vector

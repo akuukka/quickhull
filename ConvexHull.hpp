@@ -81,22 +81,6 @@ namespace quickhull {
 			return *this;
 		}
 		
-		// Construct a convex hull that consists of a single triangle
-		ConvexHull(std::array<size_t,3> triangleIndices, const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
-			if (!useOriginalIndices) {
-				m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>());
-				m_optimizedVertexBuffer->push_back(pointCloud[triangleIndices[0]]);
-				m_optimizedVertexBuffer->push_back(pointCloud[triangleIndices[1]]);
-				m_optimizedVertexBuffer->push_back(pointCloud[triangleIndices[2]]);
-				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
-				m_indices = {0,1,2};
-			}
-			else {
-				m_vertices = pointCloud;
-				m_indices = {triangleIndices[0],triangleIndices[1],triangleIndices[2]};
-			}
-		}
-		
 		// Construct vertex and index buffers from half edge mesh and pointcloud
 		ConvexHull(const Mesh<T>& mesh, const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
 			if (!useOriginalIndices) {

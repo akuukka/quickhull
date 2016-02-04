@@ -70,6 +70,8 @@ namespace quickhull {
 		static const T Epsilon;
 
 		T m_epsilon, m_epsilonSquared, m_scale;
+		bool m_planar;
+		std::vector<vec3> m_planarPointCloudTemp;
 		VertexDataSource<T> m_vertexData;
 		Mesh<T> m_mesh;
 		std::array<IndexType,6> m_extremeValues;
@@ -80,11 +82,6 @@ namespace quickhull {
 		std::vector<IndexType> m_newHalfEdgeIndices;
 		std::vector< std::unique_ptr<std::vector<IndexType>> > m_disabledFacePointVectors;
 
-		// Detect degenerate cases
-		ConvexHull<T> checkDegenerateCase0D(bool useOriginalIndices);
-		ConvexHull<T> checkDegenerateCase1D(bool useOriginalIndices);
-		ConvexHull<T> checkDegenerateCase2D(bool useOriginalIndices);
-		
 		// Create a half edge mesh representing the base tetrahedron from which the QuickHull iteration proceeds. m_extremeValues must be properly set up when this is called.
 		Mesh<T> getInitialTetrahedron();
 

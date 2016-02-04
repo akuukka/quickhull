@@ -108,6 +108,34 @@ namespace quickhull {
 		}
 
 		Mesh() = default;
+		
+		// Create a degenerate mesh consisting of a single triangle
+		Mesh(IndexType a, IndexType b, IndexType c) {
+			HalfEdge AB;
+			AB.m_endVertex = b;
+			AB.m_opp = 0;
+			AB.m_face = 0;
+			AB.m_next = 1;
+			m_halfEdges.push_back(AB);
+			
+			HalfEdge BC;
+			BC.m_endVertex = c;
+			BC.m_opp = 1;
+			BC.m_face = 0;
+			BC.m_next = 2;
+			m_halfEdges.push_back(BC);
+			
+			HalfEdge CA;
+			CA.m_endVertex = a;
+			CA.m_opp = 2;
+			CA.m_face = 0;
+			CA.m_next = 0;
+			m_halfEdges.push_back(CA);
+			
+			Face ABC;
+			ABC.m_he = 0;
+			m_faces.push_back(std::move(ABC));
+		}
 
 		// Create a mesh with initial tetrahedron ABCD. Dot product of AB with the normal of triangle ABC should be negative.
 		Mesh(IndexType a, IndexType b, IndexType c, IndexType d) {

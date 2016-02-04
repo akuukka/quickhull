@@ -19,6 +19,14 @@ namespace quickhull {
 		using FloatType = float;
 		using vec3 = Vector3<FloatType>;
 		
+		// Setup RNG
+		static std::mt19937 rng;
+		static std::uniform_real_distribution<> dist(0,1);
+		
+		FloatType rnd(FloatType from, FloatType to) {
+			return from + (FloatType)dist(rng)*(to-from);
+		};
+		
 		void assertSameValue(FloatType a, FloatType b) {
 			assert(std::abs(a-b)<0.0001f);
 		}
@@ -87,18 +95,18 @@ namespace quickhull {
 		
 		void run() {
 			// Setup test env
-			const size_t N = 1000;
+			const size_t N = 200;
 			std::vector<vec3> pc;
 			QuickHull<FloatType> qh;
+			ConvexHull<FloatType> hull;
 			
-			// Setup RNG
-			std::mt19937 rng;
-			std::uniform_real_distribution<> dist(0,1);
-			auto rnd = [&](FloatType from, FloatType to) {
-				return from + (FloatType)dist(rng)*(to-from);
-			};
+			// Seed RNG using Unix timex
+			std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+			auto seed = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+			rng.seed((unsigned int)seed);
 			
 			// Test 1 : Put N points inside unit cube. Result mesh must have exactly 8 vertices because the convex hull is the unit cube.
+			pc.clear();
 			for (int i=0;i<8;i++) {
 				pc.emplace_back(i&1 ? -1 : 1,i&2 ? -1 : 1,i&4 ? -1 : 1);
 			}
@@ -106,7 +114,7 @@ namespace quickhull {
 			{
 				pc.emplace_back(rnd(-1,1),rnd(-1,1),rnd(-1,1));
 			}
-			auto hull = qh.getConvexHull(pc,true,false);
+			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size()==8);
 			assert(hull.getIndexBuffer().size()==3*2*6); // 6 cube faces, 2 triangles per face, 3 indices per triangle
 			assert(&(hull.getVertexBuffer()[0])!=&(pc[0]));
@@ -160,23 +168,24 @@ namespace quickhull {
 			hull = qh.getConvexHull(pc,true,false);
 			
 			// Test 3: 0D and 1D degenerate cases
-			pc.clear();
 			const Vector3<FloatType> a = Vector3<FloatType>(1,1,1).getNormalized();
 			const Vector3<FloatType> b = Vector3<FloatType>(-2,4,9).getNormalized();
 			const Vector3<FloatType> c(0,0,0);
-			pc.push_back(a);
-			hull = std::move(qh.getConvexHull(pc,true,false));
-			assert(hull.getVertexBuffer().size() == 3);
-			pc.push_back(b);
-			hull = qh.getConvexHull(pc,true,false);
-			assert(hull.getVertexBuffer().size() == 3);
-			for (int i=0;i<N;i++) {
-				auto t = rnd(0.001f,0.999f);
-				auto d = a + (b-a)*t;
-				pc.push_back(d);
+			for (int h=0;h<100;h++) {
+				pc.clear();
+				pc.push_back(a);
+				hull = std::move(qh.getConvexHull(pc,true,false));
+				assert(hull.getVertexBuffer().size() == 1 && hull.getIndexBuffer().size()==3);
+				pc.push_back(b);
+				hull = qh.getConvexHull(pc,true,false);
+				assert(hull.getVertexBuffer().size() == 2 && hull.getIndexBuffer().size()==3);
+				for (int i=0;i<N;i++) {
+					auto t = rnd(0.001f,0.999f);
+					auto d = a + (b-a)*t;
+					pc.push_back(d);
+				}
+				hull = qh.getConvexHull(pc,true,false);
 			}
-			hull = qh.getConvexHull(pc,true,false);
-			assert(hull.getVertexBuffer().size() == 3);
 			
 			// Test 4: 2d degenerate cases
 			pc.clear();
@@ -185,24 +194,59 @@ namespace quickhull {
 			pc.push_back(c);
 			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size() == 3);
-			for (int i=0;i<N;i++) {
-				auto t = rnd(0.001f,0.999f);
-				auto d = a*t;
-				auto e = b*(1-t);
-				auto f = c + d + e;
-				pc.push_back(f);
+			
+			// Test 5: first a planar circle, then make a cylinder out of it
+			pc.clear();
+			for (size_t i=0;i<N;i++) {
+				const FloatType alpha = (FloatType)i/N*2*3.14159f;
+				pc.emplace_back(std::cos(alpha),0,std::sin(alpha));
 			}
 			hull = qh.getConvexHull(pc,true,false);
-			assert(hull.getVertexBuffer().size() == 3);
-			hull = qh.getConvexHull(pc,true,true);
 			assert(hull.getVertexBuffer().size() == pc.size());
-			assert(hull.getIndexBuffer().size() == 3);
-			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
+			for (size_t i=0;i<N;i++) {
+				pc.push_back(pc[i] + vec3(0,1,0));
+			}
+			hull = qh.getConvexHull(pc,true,false);
+			assert(hull.getVertexBuffer().size() == pc.size());
+			assert(hull.getIndexBuffer().size()/3 == pc.size()*2-4);
+			
+			// Test 6
+			for (int x=0;;x++) {
+				pc.clear();
+				const FloatType l = 1;
+				const FloatType r = l/(std::pow(10, x));
+				for (size_t i=0;i<N;i++) {
+					vec3 p = vec3(1,0,0)*i*l/(N-1);
+					FloatType a = rnd(0,2*3.1415f);
+					vec3 d = vec3(0,std::sin(a),std::cos(a))*r;
+					pc.push_back(p+d);
+				}
+				hull = qh.getConvexHull(pc,true,false);
+				if (hull.getVertexBuffer().size()==3) {
+					break;
+				}
+			}
+			
+			// Test 7
+			for (int h=0;h<100;h++) {
+				pc.clear();
+				const vec3 v1(rnd(-1,1),rnd(-1,1),rnd(-1,1));
+				const vec3 v2(rnd(-1,1),rnd(-1,1),rnd(-1,1));
+				pc.push_back(v1);
+				pc.push_back(v2);
+				for (int i=0;i<N;i++) {
+					auto t1 = rnd(0,1);
+					auto t2 = rnd(0,1);
+					pc.push_back(t1*v1 + t2*v2);
+				}
+				hull = qh.getConvexHull(pc,true,false);
+			}
 			
 			// Other tests
 			testPlanes();
 			sphereTest();
 			testVector3();
+			std::cout << "QuickHull tests succesfully passed." << std::endl;
 		}
 		
 
