@@ -148,8 +148,10 @@ namespace quickhull {
 				auto& pvf = m_mesh.m_faces[faceData.m_faceIndex];
 				assert(!pvf.isDisabled());
 				
-				if (pvf.m_visibilityCheckedOnIteration == iter && pvf.m_isVisibleFaceOnCurrentIteration) {
-					continue;
+				if (pvf.m_visibilityCheckedOnIteration == iter) {
+					if (pvf.m_isVisibleFaceOnCurrentIteration) {
+						continue;
+					}
 				}
 				else {
 					const Plane<T>& P = pvf.m_P;
@@ -284,7 +286,7 @@ namespace quickhull {
 			}
 
 			// Increase face stack size if needed
-			for (auto newFaceIndex : m_newFaceIndices) {
+			for (const auto newFaceIndex : m_newFaceIndices) {
 				auto& newFace = m_mesh.m_faces[newFaceIndex];
 				if (newFace.m_pointsOnPositiveSide) {
 					assert(newFace.m_pointsOnPositiveSide->size()>0);
