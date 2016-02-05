@@ -437,8 +437,7 @@ namespace quickhull {
 			}
 		}
 		if (maxD == m_epsilon) {
-			// All the points seem to lie on a 2D subspace of R^3. How to handle this? Well, let's one extra point to the point cloud so that the
-			// hull will have volume.
+			// All the points seem to lie on a 2D subspace of R^3. How to handle this? Well, let's add one extra point to the point cloud so that the convex hull will have volume.
 			m_planar = true;
 			const vec3 N = mathutils::getTriangleNormal(baseTriangleVertices[1],baseTriangleVertices[2],baseTriangleVertices[0]);
 			m_planarPointCloudTemp.clear();
