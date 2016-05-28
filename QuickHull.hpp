@@ -108,6 +108,9 @@ namespace quickhull {
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();
 		
+		// Constructs the convex hull into a MeshBuilder object which can be converted to a ConvexHull or Mesh object
+		void buildMesh(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T eps);
+		
 		// The public getConvexHull functions will setup a VertexDataSource object and call this
 		ConvexHull<T> getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T eps);
 	public:

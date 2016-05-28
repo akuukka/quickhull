@@ -39,11 +39,12 @@ namespace quickhull {
 		VertexDataSource<T> vertexDataSource((const vec3*)vertexData,vertexCount);
 		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
-
+	
 	template<typename T>
-	ConvexHull<T> QuickHull<T>::getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
+	void QuickHull<T>::buildMesh(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
 		if (pointCloud.size()==0) {
-			return ConvexHull<T>();
+			m_mesh = MeshBuilder<T>();
+			return;
 		}
 		m_vertexData = pointCloud;
 		
@@ -79,6 +80,11 @@ namespace quickhull {
 			m_vertexData = pointCloud;
 			m_planarPointCloudTemp.clear();
 		}
+	}
+
+	template<typename T>
+	ConvexHull<T> QuickHull<T>::getConvexHull(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
+		buildMesh(pointCloud,CCW,useOriginalIndices,epsilon);
 		return ConvexHull<T>(m_mesh,m_vertexData, CCW, useOriginalIndices);
 	}
 
