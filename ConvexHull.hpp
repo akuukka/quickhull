@@ -82,7 +82,7 @@ namespace quickhull {
 		}
 		
 		// Construct vertex and index buffers from half edge mesh and pointcloud
-		ConvexHull(const Mesh<T>& mesh, const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
+		ConvexHull(const MeshBuilder<T>& mesh, const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
 			if (!useOriginalIndices) {
 				m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>());
 			}

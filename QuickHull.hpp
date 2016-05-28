@@ -73,7 +73,7 @@ namespace quickhull {
 		bool m_planar;
 		std::vector<vec3> m_planarPointCloudTemp;
 		VertexDataSource<T> m_vertexData;
-		Mesh<T> m_mesh;
+		MeshBuilder<T> m_mesh;
 		std::array<IndexType,6> m_extremeValues;
 		DiagnosticsData m_diagnostics;
 
@@ -83,7 +83,7 @@ namespace quickhull {
 		std::vector< std::unique_ptr<std::vector<IndexType>> > m_disabledFacePointVectors;
 
 		// Create a half edge mesh representing the base tetrahedron from which the QuickHull iteration proceeds. m_extremeValues must be properly set up when this is called.
-		Mesh<T> getInitialTetrahedron();
+		MeshBuilder<T> getInitialTetrahedron();
 
 		// Given a list of half edges, try to rearrange them so that they form a loop. Return true on success.
 		bool reorderHorizonEdges(std::vector<IndexType>& horizonEdges);
@@ -103,7 +103,7 @@ namespace quickhull {
 		inline void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>>& ptr);
 		
 		// Associates a point with a face if the point resides on the positive side of the plane. Returns true if the points was on the positive side.
-		inline bool addPointToFace(typename Mesh<T>::Face& f, IndexType pointIndex);
+		inline bool addPointToFace(typename MeshBuilder<T>::Face& f, IndexType pointIndex);
 		
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();
@@ -170,7 +170,7 @@ namespace quickhull {
 	}
 
 	template<typename T>
-	bool QuickHull<T>::addPointToFace(typename Mesh<T>::Face& f, IndexType pointIndex) {
+	bool QuickHull<T>::addPointToFace(typename MeshBuilder<T>::Face& f, IndexType pointIndex) {
 		const T D = mathutils::getSignedDistanceToPlane(m_vertexData[ pointIndex ],f.m_P);
 		if (D>0 && D*D > m_epsilonSquared*f.m_P.m_sqrNLength) {
 			if (!f.m_pointsOnPositiveSide) {

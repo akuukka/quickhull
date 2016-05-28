@@ -1,5 +1,5 @@
 /*
- * HalfEdgeMesh.hpp
+ * Mesh.hpp
  *
  *  Created on: Sep 7, 2015
  *      Author: anttiku
@@ -22,7 +22,7 @@
 namespace quickhull {
 
 	template <typename T>
-	class Mesh {
+	class MeshBuilder {
 	public:
 		struct HalfEdge {
 			IndexType m_endVertex;
@@ -107,10 +107,10 @@ namespace quickhull {
 			m_disabledHalfEdges.push_back(heIndex);
 		}
 
-		Mesh() = default;
+		MeshBuilder() = default;
 		
 		// Create a degenerate mesh consisting of a single triangle
-		Mesh(IndexType a, IndexType b, IndexType c) {
+		MeshBuilder(IndexType a, IndexType b, IndexType c) {
 			HalfEdge AB;
 			AB.m_endVertex = b;
 			AB.m_opp = 0;
@@ -138,7 +138,7 @@ namespace quickhull {
 		}
 
 		// Create a mesh with initial tetrahedron ABCD. Dot product of AB with the normal of triangle ABC should be negative.
-		Mesh(IndexType a, IndexType b, IndexType c, IndexType d) {
+		MeshBuilder(IndexType a, IndexType b, IndexType c, IndexType d) {
 			// Create halfedges
 			HalfEdge AB;
 			AB.m_endVertex = b;

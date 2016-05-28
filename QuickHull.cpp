@@ -378,7 +378,7 @@ namespace quickhull {
 	}
 
 	template <typename T>
-	Mesh<T> QuickHull<T>::getInitialTetrahedron() {
+	MeshBuilder<T> QuickHull<T>::getInitialTetrahedron() {
 		// Find two most distant extreme points.
 		T maxD = m_epsilonSquared;
 		std::pair<IndexType,IndexType> selectedPoints;
@@ -393,7 +393,7 @@ namespace quickhull {
 		}
 		if (maxD == m_epsilonSquared) {
 			// A degenerate case: the point cloud seems to consists of a single point
-			return Mesh<T>(0,0,0);
+			return MeshBuilder<T>(0,0,0);
 		}
 		assert(selectedPoints.first != selectedPoints.second);
 		
@@ -416,7 +416,7 @@ namespace quickhull {
 				return ve != m_vertexData[selectedPoints.first] && ve != m_vertexData[selectedPoints.second];
 			});
 			const IndexType thirdPoint = (it == m_vertexData.end()) ? selectedPoints.first : std::distance(m_vertexData.begin(),it);
-			return Mesh<T>(selectedPoints.first,selectedPoints.second,thirdPoint);
+			return MeshBuilder<T>(selectedPoints.first,selectedPoints.second,thirdPoint);
 		}
 
 		// These three points form the base triangle for our tetrahedron.
@@ -455,7 +455,7 @@ namespace quickhull {
 		}
 
 		// Create a tetrahedron half edge mesh and compute planes defined by each triangle
-		Mesh<T> mesh(baseTriangle[0],baseTriangle[1],baseTriangle[2],maxI);
+		MeshBuilder<T> mesh(baseTriangle[0],baseTriangle[1],baseTriangle[2],maxI);
 		for (auto& f : mesh.m_faces) {
 			auto v = mesh.getVertexIndicesOfFace(f);
 			const Vector3<T>& va = m_vertexData[v[0]];
