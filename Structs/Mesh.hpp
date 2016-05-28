@@ -5,8 +5,8 @@
  *      Author: anttiku
  */
 
-#ifndef HALFEDGEMESH_HPP_
-#define HALFEDGEMESH_HPP_
+#ifndef MESH_HPP_
+#define MESH_HPP_
 
 #include <vector>
 #include "Vector3.hpp"
@@ -18,6 +18,8 @@
 #include <cassert>
 #include <limits>
 #include <memory>
+#include "VertexDataSource.hpp"
+#include <unordered_map>
 
 namespace quickhull {
 
@@ -29,6 +31,14 @@ namespace quickhull {
 			IndexType m_opp;
 			IndexType m_face;
 			IndexType m_next;
+			
+			void disable() {
+				m_endVertex = std::numeric_limits<IndexType>::max();
+			}
+			
+			bool isDisabled() const {
+				return m_endVertex == std::numeric_limits<IndexType>::max();
+			}
 		};
 
 		struct Face {
@@ -104,6 +114,8 @@ namespace quickhull {
 		}
 
 		void disableHalfEdge(IndexType heIndex) {
+			auto& he = m_halfEdges[heIndex];
+			he.disable();
 			m_disabledHalfEdges.push_back(heIndex);
 		}
 
@@ -261,9 +273,11 @@ namespace quickhull {
 			return {f.m_he,m_halfEdges[f.m_he].m_next,m_halfEdges[m_halfEdges[f.m_he].m_next].m_next};
 		}
 	};
+	
+
 
 }
 
 
 
-#endif /* HALFEDGEMESH_HPP_ */
+#endif 

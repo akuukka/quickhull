@@ -40,6 +40,13 @@ namespace quickhull {
 		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
 	
+	template<typename FloatType>
+	HalfEdgeMesh<FloatType, IndexType> QuickHull<FloatType>::getConvexHullAsMesh(const FloatType* vertexData, size_t vertexCount, bool CCW, FloatType epsilon) {
+		VertexDataSource<FloatType> vertexDataSource((const vec3*)vertexData,vertexCount);
+		buildMesh(vertexDataSource, CCW, false, epsilon);
+		return HalfEdgeMesh<FloatType, IndexType>(m_mesh, m_vertexData);
+	}
+	
 	template<typename T>
 	void QuickHull<T>::buildMesh(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
 		if (pointCloud.size()==0) {

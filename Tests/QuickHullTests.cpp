@@ -77,6 +77,24 @@ namespace quickhull {
 			}
 		}
 		
+		void testHalfEdgeOutput() {
+			QuickHull<FloatType> qh;
+			
+			// 8 corner vertices of a cube + tons of vertices inside. Output should be a half edge mesh with 12 faces (6 cube faces with 2 triangles per face) and 36 half edges (3 half edges per face).
+			std::vector<vec3> pc;
+			for (int h=0;h<1000;h++) {
+				pc.emplace_back(rnd(-1,1),rnd(-1,1),rnd(-1,1));
+			}
+			for (int h=0;h<8;h++) {
+				pc.emplace_back(h&1?-2:2, h&2?-2:2, h&4?-2:2);
+			}
+			HalfEdgeMesh<FloatType, size_t> mesh = qh.getConvexHullAsMesh(&pc[0].x, pc.size(), true);
+			assert(mesh.m_faces.size() == 12);
+			assert(mesh.m_halfEdges.size() == 36);
+			
+			
+		}
+		
 		void testPlanes() {
 			Vector3<FloatType> N(1,0,0);
 			Vector3<FloatType> p(2,0,0);
@@ -246,10 +264,9 @@ namespace quickhull {
 			testPlanes();
 			sphereTest();
 			testVector3();
+			testHalfEdgeOutput();
 			std::cout << "QuickHull tests succesfully passed." << std::endl;
 		}
-		
-
 		
 	}
 }
