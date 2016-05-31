@@ -72,8 +72,8 @@ namespace quickhull {
 			
 			for (auto& he : m_halfEdges) {
 				he.m_face = faceMapping[he.m_face];
-				he.m_opp = faceMapping[he.m_opp];
-				he.m_next = faceMapping[he.m_next];
+				he.m_opp = halfEdgeMapping[he.m_opp];
+				he.m_next = halfEdgeMapping[he.m_next];
 				he.m_endVertex = vertexMapping[he.m_endVertex];
 			}
 		}
