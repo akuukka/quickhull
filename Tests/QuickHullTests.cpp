@@ -71,10 +71,22 @@ namespace quickhull {
 				auto hull = qh.getConvexHull(pc,true,false);
 				y *= 15;
 				y /= 10;
-				if (hull.getVertexBuffer().size()==3) {
+				if (hull.getVertexBuffer().size()==4) {
 					break;
 				}
 			}
+		}
+		
+		void testPlanarCase() {
+			QuickHull<FloatType> qh;
+			std::vector<vec3> pc;
+			pc.emplace_back(-3.000000f, -0.250000f, -0.800000f);
+			pc.emplace_back(-3.000000f, 0.250000f, -0.800000f);
+			pc.emplace_back(-3.125000f, 0.250000f, -0.750000);
+			pc.emplace_back(-3.125000f, -0.250000f, -0.750000);
+			auto hull = qh.getConvexHull(pc,true,false);
+			assert(hull.getIndexBuffer().size()==12);
+			assert(hull.getVertexBuffer().size()==4);
 		}
 		
 		void testHalfEdgeOutput() {
@@ -91,8 +103,7 @@ namespace quickhull {
 			HalfEdgeMesh<FloatType, size_t> mesh = qh.getConvexHullAsMesh(&pc[0].x, pc.size(), true);
 			assert(mesh.m_faces.size() == 12);
 			assert(mesh.m_halfEdges.size() == 36);
-			
-			
+			assert(mesh.m_vertices.size() == 8);
 		}
 		
 		void testPlanes() {
@@ -118,7 +129,7 @@ namespace quickhull {
 			QuickHull<FloatType> qh;
 			ConvexHull<FloatType> hull;
 			
-			// Seed RNG using Unix timex
+			// Seed RNG using Unix time
 			std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 			auto seed = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 			rng.seed((unsigned int)seed);
@@ -150,7 +161,7 @@ namespace quickhull {
 			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
 			
 			// Test 2 : random N points from the boundary of unit sphere. Result mesh must have exactly N points.
-			pc = createSphere<FloatType>(1, 100);
+			pc = createSphere<FloatType>(1, 50);
 			hull = qh.getConvexHull(pc,true,false);
 			assert(pc.size() == hull.getVertexBuffer().size());
 			hull = qh.getConvexHull(pc,true,true);
@@ -170,12 +181,12 @@ namespace quickhull {
 					p.x *= mul;
 				}
 				hull = qh.getConvexHull(pc,true,false);
-				if (hull.getVertexBuffer().size() == 3) {
+				if (hull.getVertexBuffer().size() == 4) {
 					break;
 				}
 			}
 			
-			// Test 2.5: 0D
+			// Test 3: 0D
 			pc.clear();
 			vec3 centerPoint(2,2,2);
 			pc.push_back(centerPoint);
@@ -184,34 +195,10 @@ namespace quickhull {
 				pc.push_back(newp);
 			}
 			hull = qh.getConvexHull(pc,true,false);
+			assert(hull.getIndexBuffer().size()==12);
 			
-			// Test 3: 0D and 1D degenerate cases
-			const Vector3<FloatType> a = Vector3<FloatType>(1,1,1).getNormalized();
-			const Vector3<FloatType> b = Vector3<FloatType>(-2,4,9).getNormalized();
-			const Vector3<FloatType> c(0,0,0);
-			for (int h=0;h<100;h++) {
-				pc.clear();
-				pc.push_back(a);
-				hull = std::move(qh.getConvexHull(pc,true,false));
-				assert(hull.getVertexBuffer().size() == 1 && hull.getIndexBuffer().size()==3);
-				pc.push_back(b);
-				hull = qh.getConvexHull(pc,true,false);
-				assert(hull.getVertexBuffer().size() == 2 && hull.getIndexBuffer().size()==3);
-				for (int i=0;i<N;i++) {
-					auto t = rnd(0.001f,0.999f);
-					auto d = a + (b-a)*t;
-					pc.push_back(d);
-				}
-				hull = qh.getConvexHull(pc,true,false);
-			}
-			
-			// Test 4: 2d degenerate cases
-			pc.clear();
-			pc.push_back(a);
-			pc.push_back(b);
-			pc.push_back(c);
-			hull = qh.getConvexHull(pc,true,false);
-			assert(hull.getVertexBuffer().size() == 3);
+			// Test 4: 2d degenerate case
+			testPlanarCase();
 			
 			// Test 5: first a planar circle, then make a cylinder out of it
 			pc.clear();
@@ -220,6 +207,7 @@ namespace quickhull {
 				pc.emplace_back(std::cos(alpha),0,std::sin(alpha));
 			}
 			hull = qh.getConvexHull(pc,true,false);
+			
 			assert(hull.getVertexBuffer().size() == pc.size());
 			for (size_t i=0;i<N;i++) {
 				pc.push_back(pc[i] + vec3(0,1,0));
@@ -240,7 +228,7 @@ namespace quickhull {
 					pc.push_back(p+d);
 				}
 				hull = qh.getConvexHull(pc,true,false);
-				if (hull.getVertexBuffer().size()==3) {
+				if (hull.getVertexBuffer().size()==4) {
 					break;
 				}
 			}

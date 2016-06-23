@@ -69,20 +69,11 @@ namespace quickhull {
 		m_planar = false; // The planar case happens when all the points appear to lie on a two dimensional subspace of R^3.
 		createConvexHalfEdgeMesh();
 		if (m_planar) {
-			// Disable all faces connected to the extra point we added (final mesh will be planar)
 			const size_t extraPointIndex = m_planarPointCloudTemp.size()-1;
-			std::vector<size_t> disableList;
-			for (size_t i = 0; i< m_mesh.m_faces.size();i++) {
-				auto& face = m_mesh.m_faces[i];
-				if (!face.isDisabled()) {
-					auto v = m_mesh.getVertexIndicesOfFace(face);
-					if (v[0]==extraPointIndex || v[1]==extraPointIndex || v[2]==extraPointIndex) {
-						disableList.push_back(i);
-					}
+			for (auto& he : m_mesh.m_halfEdges) {
+				if (he.m_endVertex == extraPointIndex) {
+					he.m_endVertex = 0;
 				}
-			}
-			for (auto i: disableList) {
-				m_mesh.m_faces[i].disable();
 			}
 			m_vertexData = pointCloud;
 			m_planarPointCloudTemp.clear();
@@ -109,11 +100,7 @@ namespace quickhull {
 
 		// Compute base tetrahedron
 		m_mesh = getInitialTetrahedron();
-		assert(m_mesh.m_faces.size()==1 || m_mesh.m_faces.size()==4);
-		if (m_mesh.m_faces.size()==1) {
-			// A degenerate case
-			return;
-		}
+		assert(m_mesh.m_faces.size()==4);
 
 		// Init face stack with those faces that have points assigned to them
 		std::deque<IndexType> faceList;
@@ -392,6 +379,13 @@ namespace quickhull {
 
 	template <typename T>
 	MeshBuilder<T> QuickHull<T>::getInitialTetrahedron() {
+		const size_t vertexCount = m_vertexData.size();
+		
+		// If we have at most 4 points, just return a degenerate tetrahedron:
+		if (vertexCount <= 4) {
+			return MeshBuilder<T>(0,std::min((size_t)1,vertexCount),std::min((size_t)2,vertexCount),std::min((size_t)3,vertexCount));
+		}
+		
 		// Find two most distant extreme points.
 		T maxD = m_epsilonSquared;
 		std::pair<IndexType,IndexType> selectedPoints;
@@ -406,7 +400,7 @@ namespace quickhull {
 		}
 		if (maxD == m_epsilonSquared) {
 			// A degenerate case: the point cloud seems to consists of a single point
-			return MeshBuilder<T>(0,0,0);
+			return MeshBuilder<T>(0,std::min((size_t)1,vertexCount),std::min((size_t)2,vertexCount),std::min((size_t)3,vertexCount));
 		}
 		assert(selectedPoints.first != selectedPoints.second);
 		
@@ -429,7 +423,11 @@ namespace quickhull {
 				return ve != m_vertexData[selectedPoints.first] && ve != m_vertexData[selectedPoints.second];
 			});
 			const IndexType thirdPoint = (it == m_vertexData.end()) ? selectedPoints.first : std::distance(m_vertexData.begin(),it);
-			return MeshBuilder<T>(selectedPoints.first,selectedPoints.second,thirdPoint);
+			it = std::find_if(m_vertexData.begin(),m_vertexData.end(),[&](const vec3& ve) {
+				return ve != m_vertexData[selectedPoints.first] && ve != m_vertexData[selectedPoints.second] && ve != m_vertexData[thirdPoint];
+			});
+			const IndexType fourthPoint = (it == m_vertexData.end()) ? selectedPoints.first : std::distance(m_vertexData.begin(),it);
+			return MeshBuilder<T>(selectedPoints.first,selectedPoints.second,thirdPoint,fourthPoint);
 		}
 
 		// These three points form the base triangle for our tetrahedron.
