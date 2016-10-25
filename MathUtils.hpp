@@ -13,7 +13,7 @@ namespace quickhull {
 		inline T getSquaredDistanceBetweenPointAndRay(const Vector3<T>& p, const Ray<T>& r) {
 			const Vector3<T> s = p-r.m_S;
 			T t = s.dotProduct(r.m_V);
-			return s.getLengthSquared() - t*t/(r.m_V.getLengthSquared());
+			return s.getLengthSquared() - t*t*r.m_VInvLengthSquared;
 		}
 		
 		// Note that the unit of distance returned is relative to plane's normal's length (divide by N.getNormalized() if needed to get the "real" distance).
