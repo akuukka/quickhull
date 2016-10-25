@@ -1,9 +1,7 @@
 #include "QuickHull.hpp"
-#include "Structs/Plane.hpp"
 #include "MathUtils.hpp"
 #include <cmath>
 #include <cassert>
-#include <functional>
 #include <iostream>
 #include <algorithm>
 #include <deque>
