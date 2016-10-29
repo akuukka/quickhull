@@ -381,7 +381,7 @@ namespace quickhull {
 		
 		// If we have at most 4 points, just return a degenerate tetrahedron:
 		if (vertexCount <= 4) {
-			IndexType v[4] = {0,std::min((size_t)1,vertexCount),std::min((size_t)2,vertexCount),std::min((size_t)3,vertexCount)};
+			IndexType v[4] = {0,std::min((size_t)1,vertexCount-1),std::min((size_t)2,vertexCount-1),std::min((size_t)3,vertexCount-1)};
 			const Vector3<T> N = mathutils::getTriangleNormal(m_vertexData[v[0]],m_vertexData[v[1]],m_vertexData[v[2]]);
 			const Plane<T> trianglePlane(N,m_vertexData[v[0]]);
 			if (trianglePlane.isPointOnPositiveSide(m_vertexData[v[3]])) {
@@ -404,7 +404,7 @@ namespace quickhull {
 		}
 		if (maxD == m_epsilonSquared) {
 			// A degenerate case: the point cloud seems to consists of a single point
-			return MeshBuilder<T>(0,std::min((size_t)1,vertexCount),std::min((size_t)2,vertexCount),std::min((size_t)3,vertexCount));
+			return MeshBuilder<T>(0,std::min((size_t)1,vertexCount-1),std::min((size_t)2,vertexCount-1),std::min((size_t)3,vertexCount-1));
 		}
 		assert(selectedPoints.first != selectedPoints.second);
 		
