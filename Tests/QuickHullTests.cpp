@@ -75,6 +75,33 @@ namespace quickhull {
 					break;
 				}
 			}
+			
+			// Test worst case scenario: more and more points on the unit sphere. All points should be part of the convex hull, as long as we can make epsilon smaller without
+			// running out of numerical accuracy.
+			size_t i =  1;
+			FloatType eps = 0.002f;
+			for (;;) {
+				auto pc = createSphere<FloatType>(1, i, Vector3<FloatType>(0,0,0));
+				auto hull = qh.getConvexHull(pc,true,false,eps);
+				std::cout << i << ":" << pc.size() << " : " << hull.getVertexBuffer().size() << " at eps=" << eps << std::endl;
+				if (qh.getDiagnostics().m_failedHorizonEdges) {
+					// This should not happen
+					assert(false);
+					break;
+				}
+				if (pc.size() == hull.getVertexBuffer().size()) {
+					// Fine, all the points on unit sphere do belong to the convex mesh.
+					i += 1;
+				}
+				else {
+					eps *= 0.5f;
+					std::cout << "Epsilon to " << eps << std::endl;
+				}
+				
+				if (i == 500) {
+					break;
+				}
+			}
 		}
 		
 		void testPlanarCase() {
