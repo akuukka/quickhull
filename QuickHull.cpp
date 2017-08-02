@@ -141,7 +141,7 @@ namespace quickhull {
 			visibleFaces.clear();
 			possiblyVisibleFaces.emplace_back(topFaceIndex,std::numeric_limits<size_t>::max());
 			while (possiblyVisibleFaces.size()) {
-				const auto& faceData = possiblyVisibleFaces.back();
+				const auto faceData = possiblyVisibleFaces.back();
 				possiblyVisibleFaces.pop_back();
 				auto& pvf = m_mesh.m_faces[faceData.m_faceIndex];
 				assert(!pvf.isDisabled());
