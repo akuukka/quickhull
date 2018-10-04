@@ -1,10 +1,3 @@
-/*
- * ConvexHull.hpp
- *
- *  Created on: Sep 19, 2015
- *      Author: anttiku
- */
-
 #ifndef CONVEXHULL_HPP_
 #define CONVEXHULL_HPP_
 

@@ -1,10 +1,3 @@
-/*
- * Mesh.hpp
- *
- *  Created on: Sep 7, 2015
- *      Author: anttiku
- */
-
 #ifndef MESH_HPP_
 #define MESH_HPP_
 

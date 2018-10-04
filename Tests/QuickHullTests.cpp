@@ -1,11 +1,3 @@
-//
-//  QuickHullTests.cpp
-//  QuickHull
-//
-//  Created by Antti Kuukka on 1/5/16.
-//  Copyright © 2016 Antti Kuukka. All rights reserved.
-//
-
 #include "../QuickHull.hpp"
 #include "../MathUtils.hpp"
 #include <iostream>

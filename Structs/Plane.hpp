@@ -1,10 +1,3 @@
-/*
- * Plane.hpp
- *
- *  Created on: Dec 7, 2013
- *      Author: anttiku
- */
-
 #ifndef QHPLANE_HPP_
 #define QHPLANE_HPP_
 

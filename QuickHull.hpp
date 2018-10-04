@@ -1,10 +1,3 @@
-/*
- * QuickHull.hpp
- *
- *  Created on: May 4, 2014
- *      Author: anttiku
- */
-
 #ifndef QUICKHULL_HPP_
 #define QUICKHULL_HPP_
 
