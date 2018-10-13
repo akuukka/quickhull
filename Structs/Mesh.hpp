@@ -1,6 +1,7 @@
 #ifndef MESH_HPP_
 #define MESH_HPP_
 
+#include <cstdint>
 #include <vector>
 #include "Vector3.hpp"
 #include "Plane.hpp"
@@ -43,7 +44,7 @@ namespace quickhull {
 			std::uint8_t m_isVisibleFaceOnCurrentIteration : 1;
 			std::uint8_t m_inFaceStack : 1;
 			std::uint8_t m_horizonEdgesOnCurrentIteration : 3; // Bit for each half edge assigned to this face, each being 0 or 1 depending on whether the edge belongs to horizon edge
-			std::unique_ptr<std::vector<IndexType>> m_pointsOnPositiveSide;
+			std::shared_ptr<std::vector<IndexType>> m_pointsOnPositiveSide;
 
 			Face() : m_he(std::numeric_limits<IndexType>::max()),
 					 m_mostDistantPointDist(0),
@@ -99,7 +100,7 @@ namespace quickhull {
 		}
 
 		// Mark a face as disabled and return a pointer to the points that were on the positive of it.
-		std::unique_ptr<std::vector<IndexType>> disableFace(IndexType faceIndex) {
+		std::shared_ptr<std::vector<IndexType>> disableFace(IndexType faceIndex) {
 			auto& f = m_faces[faceIndex];
 			f.disable();
 			m_disabledFaces.push_back(faceIndex);
