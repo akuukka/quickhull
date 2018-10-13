@@ -74,7 +74,7 @@ namespace quickhull {
 		// Temporary variables used during iteration process
 		std::vector<IndexType> m_newFaceIndices;
 		std::vector<IndexType> m_newHalfEdgeIndices;
-		std::vector< std::unique_ptr<std::vector<IndexType>> > m_disabledFacePointVectors;
+		std::vector< std::shared_ptr<std::vector<IndexType>> > m_disabledFacePointVectors;
 
 		// Create a half edge mesh representing the base tetrahedron from which the QuickHull iteration proceeds. m_extremeValues must be properly set up when this is called.
 		MeshBuilder<FloatType> getInitialTetrahedron();
@@ -93,8 +93,8 @@ namespace quickhull {
 		// exists, is moved to the index vector pool, and when we need to add new faces with points on the positive side to the mesh,
 		// we reuse these vectors. This reduces the amount of std::vectors we have to deal with, and impact on performance is remarkable.
 		Pool<std::vector<IndexType>> m_indexVectorPool;
-		inline std::unique_ptr<std::vector<IndexType>> getIndexVectorFromPool();
-		inline void reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>>& ptr);
+		inline std::shared_ptr<std::vector<IndexType>> getIndexVectorFromPool();
+		inline void reclaimToIndexVectorPool(std::shared_ptr<std::vector<IndexType>>& ptr);
 		
 		// Associates a point with a face if the point resides on the positive side of the plane. Returns true if the points was on the positive side.
 		inline bool addPointToFace(typename MeshBuilder<FloatType>::Face& f, IndexType pointIndex);
@@ -160,18 +160,18 @@ namespace quickhull {
 	 */
 	
 	template<typename T>
-	std::unique_ptr<std::vector<IndexType>> QuickHull<T>::getIndexVectorFromPool() {
+	std::shared_ptr<std::vector<IndexType>> QuickHull<T>::getIndexVectorFromPool() {
 		auto r = std::move(m_indexVectorPool.get());
 		r->clear();
 		return r;
 	}
 	
 	template<typename T>
-	void QuickHull<T>::reclaimToIndexVectorPool(std::unique_ptr<std::vector<IndexType>>& ptr) {
+	void QuickHull<T>::reclaimToIndexVectorPool(std::shared_ptr<std::vector<IndexType>>& ptr) {
 		const size_t oldSize = ptr->size();
 		if ((oldSize+1)*128 < ptr->capacity()) {
 			// Reduce memory usage! Huge vectors are needed at the beginning of iteration when faces have many points on their positive side. Later on, smaller vectors will suffice.
-			ptr.reset(nullptr);
+			ptr.reset();
 			return;
 		}
 		m_indexVectorPool.reclaim(ptr);

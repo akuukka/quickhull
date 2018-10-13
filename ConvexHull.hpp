@@ -13,7 +13,7 @@ namespace quickhull {
 
 	template<typename T>
 	class ConvexHull {
-		std::unique_ptr<std::vector<Vector3<T>>> m_optimizedVertexBuffer;
+		std::shared_ptr<std::vector<Vector3<T>>> m_optimizedVertexBuffer;
 		VertexDataSource<T> m_vertices;
 		std::vector<size_t> m_indices;
 	public:
