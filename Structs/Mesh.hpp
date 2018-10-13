@@ -1,6 +1,7 @@
 #ifndef MESH_HPP_
 #define MESH_HPP_
 
+#include <cstdint>
 #include <vector>
 #include "Vector3.hpp"
 #include "Plane.hpp"
