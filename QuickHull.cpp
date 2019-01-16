@@ -9,12 +9,16 @@
 #include "Structs/Mesh.hpp"
 
 namespace quickhull {
+
+	template<>
+	float defaultEps() { 
+		return 0.0001f;
+	}
 	
 	template<>
-	const float QuickHull<float>::Epsilon = 0.0001f;
-	
-	template<>
-	const double QuickHull<double>::Epsilon = 0.0000001;
+	double defaultEps() {
+		return 0.0000001; 
+	}
 	
 	/*
 	 * Implementation of the algorithm

@@ -140,8 +140,8 @@ namespace quickhull {
 			dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(6,0,0), P);
 			assertSameValue(dist,8);
 		}
-		
-		void run() {
+
+		int run() {
 			// Setup test env
 			const size_t N = 200;
 			std::vector<vec3> pc;
@@ -269,10 +269,11 @@ namespace quickhull {
 			
 			// Other tests
 			testPlanes();
-			sphereTest();
 			testVector3();
 			testHalfEdgeOutput();
+			sphereTest();
 			std::cout << "QuickHull tests succesfully passed." << std::endl;
+			return 0;
 		}
 		
 	}
