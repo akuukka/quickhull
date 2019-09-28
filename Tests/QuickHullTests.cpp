@@ -3,6 +3,7 @@
 #include <iostream>
 #include <random>
 #include <cassert>
+#include <chrono>
 
 namespace quickhull {
 	
