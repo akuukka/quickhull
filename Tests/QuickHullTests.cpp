@@ -139,6 +139,22 @@ namespace quickhull {
 			assertSameValue(dist,8);
 		}
 
+		static void testVertexBufferAddress() {
+			QuickHull<FloatType> qh;
+			std::vector<vec3> pc;
+			pc.emplace_back(0, 0, 0);
+			pc.emplace_back(1, 0, 0);
+			pc.emplace_back(0, 1, 0);
+
+			for (size_t i=0;i<2;i++) {
+				const bool useOriginalIndices = i != 0;
+				const auto hull = qh.getConvexHull(pc,false, useOriginalIndices);
+				const auto vertices = hull.getVertexBuffer();
+				assert(vertices.size() > 0);
+				assert((&vertices[0] == &pc[0]) == useOriginalIndices);
+			}
+		}
+
 		static void testNormals() {
 			QuickHull<FloatType> qh;
 			std::vector<vec3> pc;
@@ -273,6 +289,7 @@ namespace quickhull {
 			}
 			
 			// Other tests
+			testVertexBufferAddress();
 			testNormals();
 			testPlanes();
 			testVector3();
