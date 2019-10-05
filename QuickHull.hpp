@@ -1,6 +1,6 @@
 #ifndef QUICKHULL_HPP_
 #define QUICKHULL_HPP_
-
+#include <deque>
 #include <vector>
 #include <array>
 #include <limits>
@@ -75,9 +75,18 @@ namespace quickhull {
 		std::vector<size_t> m_newFaceIndices;
 		std::vector<size_t> m_newHalfEdgeIndices;
 		std::vector< std::unique_ptr<std::vector<size_t>> > m_disabledFacePointVectors;
+		std::vector<size_t> m_visibleFaces;
+		std::vector<size_t> m_horizonEdges;
+		struct FaceData {
+			size_t m_faceIndex;
+			size_t m_enteredFromHalfEdge; // If the face turns out not to be visible, this half edge will be marked as horizon edge
+			FaceData(size_t fi, size_t he) : m_faceIndex(fi),m_enteredFromHalfEdge(he) {}
+		};
+		std::vector<FaceData> m_possiblyVisibleFaces;
+		std::deque<size_t> m_faceList;
 
 		// Create a half edge mesh representing the base tetrahedron from which the QuickHull iteration proceeds. m_extremeValues must be properly set up when this is called.
-		MeshBuilder<FloatType> getInitialTetrahedron();
+		void setupInitialTetrahedron();
 
 		// Given a list of half edges, try to rearrange them so that they form a loop. Return true on success.
 		bool reorderHorizonEdges(std::vector<size_t>& horizonEdges);

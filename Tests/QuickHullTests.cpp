@@ -272,21 +272,6 @@ namespace quickhull {
 				}
 			}
 			
-			// Test 7
-			for (int h=0;h<100;h++) {
-				pc.clear();
-				const vec3 v1(rnd(-1,1),rnd(-1,1),rnd(-1,1));
-				const vec3 v2(rnd(-1,1),rnd(-1,1),rnd(-1,1));
-				pc.push_back(v1);
-				pc.push_back(v2);
-				for (int i=0;i<N;i++) {
-					auto t1 = rnd(0,1);
-					auto t2 = rnd(0,1);
-					pc.push_back(t1*v1 + t2*v2);
-				}
-				hull = qh.getConvexHull(pc,true,false);
-			}
-			
 			// Other tests
 			testNormals();
 			testPlanes();

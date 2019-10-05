@@ -113,7 +113,12 @@ namespace quickhull {
 		MeshBuilder() = default;
 		
 		// Create a mesh with initial tetrahedron ABCD. Dot product of AB with the normal of triangle ABC should be negative.
-		MeshBuilder(size_t a, size_t b, size_t c, size_t d) {
+		void setup(size_t a, size_t b, size_t c, size_t d) {
+			m_faces.clear();
+			m_halfEdges.clear();
+			m_disabledFaces.clear();
+			m_disabledHalfEdges.clear();
+			
 			// Create halfedges
 			HalfEdge AB;
 			AB.m_endVertex = b;
