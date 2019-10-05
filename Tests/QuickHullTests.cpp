@@ -20,11 +20,11 @@ namespace quickhull {
 			return from + (FloatType)dist(rng)*(to-from);
 		};
 		
-		void assertSameValue(FloatType a, FloatType b) {
+		static void assertSameValue(FloatType a, FloatType b) {
 			assert(std::abs(a-b)<0.0001f);
 		}
 		
-		void testVector3() {
+		static void testVector3() {
 			typedef Vector3<FloatType> vec3;
 			vec3 a(1,0,0);
 			vec3 b(1,0,0);
@@ -39,7 +39,7 @@ namespace quickhull {
 		}
 		
 		template <typename T>
-		std::vector<Vector3<T>> createSphere(T radius, size_t M, Vector3<T> offset = Vector3<T>(0,0,0)) {
+		static std::vector<Vector3<T>> createSphere(T radius, size_t M, Vector3<T> offset = Vector3<T>(0,0,0)) {
 			std::vector<Vector3<T>> pc;
 			const T pi = 3.14159f;
 			for (int i=0;i<=M;i++) {
@@ -56,7 +56,7 @@ namespace quickhull {
 			return pc;
 		}
 		
-		void sphereTest() {
+		static void sphereTest() {
 			QuickHull<FloatType> qh;
 			FloatType y = 1;
 			for (;;) {
@@ -76,7 +76,6 @@ namespace quickhull {
 			for (;;) {
 				auto pc = createSphere<FloatType>(1, i, Vector3<FloatType>(0,0,0));
 				auto hull = qh.getConvexHull(pc,true,false,eps);
-				std::cout << i << ":" << pc.size() << " : " << hull.getVertexBuffer().size() << " at eps=" << eps << std::endl;
 				if (qh.getDiagnostics().m_failedHorizonEdges) {
 					// This should not happen
 					assert(false);
@@ -88,16 +87,14 @@ namespace quickhull {
 				}
 				else {
 					eps *= 0.5f;
-					std::cout << "Epsilon to " << eps << std::endl;
 				}
-				
-				if (i == 500) {
+				if (i == 100) {
 					break;
 				}
 			}
 		}
 		
-		void testPlanarCase() {
+		static void testPlanarCase() {
 			QuickHull<FloatType> qh;
 			std::vector<vec3> pc;
 			pc.emplace_back(-3.000000f, -0.250000f, -0.800000f);
@@ -109,7 +106,7 @@ namespace quickhull {
 			assert(hull.getVertexBuffer().size()==4);
 		}
 		
-		void testHalfEdgeOutput() {
+		static void testHalfEdgeOutput() {
 			QuickHull<FloatType> qh;
 			
 			// 8 corner vertices of a cube + tons of vertices inside. Output should be a half edge mesh with 12 faces (6 cube faces with 2 triangles per face) and 36 half edges (3 half edges per face).
@@ -126,7 +123,7 @@ namespace quickhull {
 			assert(mesh.m_vertices.size() == 8);
 		}
 		
-		void testPlanes() {
+		static void testPlanes() {
 			Vector3<FloatType> N(1,0,0);
 			Vector3<FloatType> p(2,0,0);
 			Plane<FloatType> P(N,p);
@@ -140,6 +137,28 @@ namespace quickhull {
 			P = Plane<FloatType>(N,p);
 			dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(6,0,0), P);
 			assertSameValue(dist,8);
+		}
+
+		static void testNormals() {
+			QuickHull<FloatType> qh;
+			std::vector<vec3> pc;
+			pc.emplace_back(0, 0, 0);
+			pc.emplace_back(1, 0, 0);
+			pc.emplace_back(0, 1, 0);
+
+			std::array<vec3, 2> normal;
+			for (size_t i=0;i<2;i++) {
+				const bool CCW = i;
+				const auto hull = qh.getConvexHull(pc,CCW,false);
+				const auto vertices = hull.getVertexBuffer();
+				const auto indices = hull.getIndexBuffer();
+				assert(vertices.size() == 3);
+				assert(indices.size() >= 6);
+				const vec3 triangle[3] = { vertices[indices[0]], vertices[indices[1]], vertices[indices[2]] };
+				normal[i] = mathutils::getTriangleNormal(triangle[0], triangle[1], triangle[2]);
+			}
+			const auto dot = normal[0].dotProduct(normal[1]);
+			assertSameValue(dot, -1);
 		}
 
 		int run() {
@@ -269,6 +288,7 @@ namespace quickhull {
 			}
 			
 			// Other tests
+			testNormals();
 			testPlanes();
 			testVector3();
 			testHalfEdgeOutput();

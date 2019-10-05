@@ -92,7 +92,8 @@ namespace quickhull {
 			if (faceStack.size()==0) {
 				return;
 			}
-			
+
+			const size_t iCCW = CCW ? 1 : 0;
 			const size_t finalMeshFaceCount = mesh.m_faces.size() - mesh.m_disabledFaces.size();
 			m_indices.reserve(finalMeshFaceCount*3);
 
@@ -128,14 +129,8 @@ namespace quickhull {
 						}
 					}
 					m_indices.push_back(vertices[0]);
-					if (CCW) {
-						m_indices.push_back(vertices[2]);
-						m_indices.push_back(vertices[1]);
-					}
-					else {
-						m_indices.push_back(vertices[1]);
-						m_indices.push_back(vertices[2]);
-					}
+					m_indices.push_back(vertices[1 + iCCW]);
+					m_indices.push_back(vertices[2 - iCCW]);
 				}
 			}
 			
@@ -151,12 +146,20 @@ namespace quickhull {
 			return m_indices;
 		}
 
+		const std::vector<size_t>& getIndexBuffer() const {
+			return m_indices;
+		}
+
 		VertexDataSource<T>& getVertexBuffer() {
 			return m_vertices;
 		}
 		
+		const VertexDataSource<T>& getVertexBuffer() const {
+			return m_vertices;
+		}
+		
 		// Export the mesh to a Waveform OBJ file
-		void writeWaveformOBJ(const std::string& filename, const std::string& objectName = "quickhull")
+		void writeWaveformOBJ(const std::string& filename, const std::string& objectName = "quickhull") const
 		{
 			std::ofstream objFile;
 			objFile.open (filename);
