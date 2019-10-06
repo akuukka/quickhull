@@ -119,6 +119,9 @@ namespace quickhull {
 			m_disabledFaces.clear();
 			m_disabledHalfEdges.clear();
 			
+			m_faces.reserve(4);
+			m_halfEdges.reserve(12);
+			
 			// Create halfedges
 			HalfEdge AB;
 			AB.m_endVertex = b;
