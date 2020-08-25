@@ -50,6 +50,11 @@ namespace quickhull {
 	
 	template<typename T>
 	void QuickHull<T>::buildMesh(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
+		// CCW is unused for now
+		(void)CCW;
+		// useOriginalIndices is unused for now
+		(void)useOriginalIndices;
+
 		if (pointCloud.size()==0) {
 			m_mesh = MeshBuilder<T>();
 			return;
@@ -451,10 +456,10 @@ namespace quickhull {
 		if (maxD == m_epsilon) {
 			// All the points seem to lie on a 2D subspace of R^3. How to handle this? Well, let's add one extra point to the point cloud so that the convex hull will have volume.
 			m_planar = true;
-			const vec3 N = mathutils::getTriangleNormal(baseTriangleVertices[1],baseTriangleVertices[2],baseTriangleVertices[0]);
+			const vec3 N1 = mathutils::getTriangleNormal(baseTriangleVertices[1],baseTriangleVertices[2],baseTriangleVertices[0]);
 			m_planarPointCloudTemp.clear();
 			m_planarPointCloudTemp.insert(m_planarPointCloudTemp.begin(),m_vertexData.begin(),m_vertexData.end());
-			const vec3 extraPoint = N + m_vertexData[0];
+			const vec3 extraPoint = N1 + m_vertexData[0];
 			m_planarPointCloudTemp.push_back(extraPoint);
 			maxI = m_planarPointCloudTemp.size()-1;
 			m_vertexData = VertexDataSource<T>(m_planarPointCloudTemp);
@@ -473,9 +478,9 @@ namespace quickhull {
 			const Vector3<T>& va = m_vertexData[v[0]];
 			const Vector3<T>& vb = m_vertexData[v[1]];
 			const Vector3<T>& vc = m_vertexData[v[2]];
-			const Vector3<T> N = mathutils::getTriangleNormal(va, vb, vc);
-			const Plane<T> trianglePlane(N,va);
-			f.m_P = trianglePlane;
+			const Vector3<T> N1 = mathutils::getTriangleNormal(va, vb, vc);
+			const Plane<T> plane(N1,va);
+			f.m_P = plane;
 		}
 
 		// Finally we assign a face for each vertex outside the tetrahedron (vertices inside the tetrahedron have no role anymore)
