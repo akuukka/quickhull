@@ -117,14 +117,14 @@ namespace quickhull {
 					auto vertices = mesh.getVertexIndicesOfFace(mesh.m_faces[top]);
 					if (!useOriginalIndices) {
 						for (auto& v : vertices) {
-							auto it = vertexIndexMapping.find(v);
-							if (it == vertexIndexMapping.end()) {
+							auto itV = vertexIndexMapping.find(v);
+							if (itV == vertexIndexMapping.end()) {
 								m_optimizedVertexBuffer->push_back(pointCloud[v]);
 								vertexIndexMapping[v] = m_optimizedVertexBuffer->size()-1;
 								v = m_optimizedVertexBuffer->size()-1;
 							}
 							else {
-								v = it->second;
+								v = itV->second;
 							}
 						}
 					}
