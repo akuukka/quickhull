@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
+project(QuickHullTests)
 
 set(SOURCE_FILES
   ${CMAKE_SOURCE_DIR}/QuickHullTests.cpp
