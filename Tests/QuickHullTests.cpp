@@ -107,9 +107,11 @@ namespace quickhull {
 		}
 		
 		static void testHalfEdgeOutput() {
-			QuickHull<FloatType> qh;
+			QuickHull<FloatType> qh;            
 			
-			// 8 corner vertices of a cube + tons of vertices inside. Output should be a half edge mesh with 12 faces (6 cube faces with 2 triangles per face) and 36 half edges (3 half edges per face).
+			// 8 corner vertices of a cube + tons of vertices inside.
+			// Output should be a half edge mesh with 12 faces (6 cube faces with 2 triangles
+			// per face) and 36 half edges (3 half edges per face).
 			std::vector<vec3> pc;
 			for (int h=0;h<1000;h++) {
 				pc.emplace_back(rnd(-1,1),rnd(-1,1),rnd(-1,1));
@@ -121,6 +123,14 @@ namespace quickhull {
 			assert(mesh.m_faces.size() == 12);
 			assert(mesh.m_halfEdges.size() == 36);
 			assert(mesh.m_vertices.size() == 8);
+
+			// Verify that for each face f, f.halfedgeIndex equals next(next(next(f.halfedgeIndex))).
+			for (const auto& f : mesh.m_faces) {
+				size_t next = mesh.m_halfEdges[f.m_halfEdgeIndex].m_next;
+				next = mesh.m_halfEdges[next].m_next;
+				next = mesh.m_halfEdges[next].m_next;
+				assert(next == f.m_halfEdgeIndex);
+			}
 		}
 		
 		static void testPlanes() {
