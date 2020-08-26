@@ -14,8 +14,8 @@ Basic usage:
 	// Add points to point cloud
 	...
 	auto hull = qh.getConvexHull(pointCloud, true, false);
-	auto indexBuffer = hull.getIndexBuffer();
-	auto vertexBuffer = hull.getVertexBuffer();
+	const auto& indexBuffer = hull.getIndexBuffer();
+	const auto& vertexBuffer = hull.getVertexBuffer();
 	// Do what you want with the convex triangle mesh
 
 Vertex data can be passed as a pointer to float/double as long as the data is in X_0,Y_0,Z_0,X_1,Y_1,Z_1,...,X_N,Y_N_Z_N format:
