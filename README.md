@@ -1,6 +1,8 @@
 This implementation is 100% Public Domain.
 
 Feel free to use.
+
+Nice implementation of Algorithm...
  
 C++11 is needed to compile it.
 
