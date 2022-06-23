@@ -5,7 +5,7 @@
 #include <memory>
 
 namespace quickhull {
-	
+
 	template<typename T>
 	class Pool {
 		std::vector<std::unique_ptr<T>> m_data;
@@ -13,11 +13,11 @@ namespace quickhull {
 		void clear() {
 			m_data.clear();
 		}
-		
+
 		void reclaim(std::unique_ptr<T>& ptr) {
 			m_data.push_back(std::move(ptr));
 		}
-		
+
 		std::unique_ptr<T> get() {
 			if (m_data.size()==0) {
 				return std::unique_ptr<T>(new T());
@@ -27,9 +27,9 @@ namespace quickhull {
 			m_data.erase(it);
 			return r;
 		}
-		
+
 	};
-	
+
 }
 
 #endif /* Pool_h */

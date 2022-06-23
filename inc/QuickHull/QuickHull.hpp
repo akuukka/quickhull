@@ -49,10 +49,10 @@
  * */
 
 namespace quickhull {
-	
+
 	struct DiagnosticsData {
 		size_t m_failedHorizonEdges; // How many times QuickHull failed to solve the horizon edge. Failures lead to degenerated convex hulls.
-		
+
 		DiagnosticsData() : m_failedHorizonEdges(0) { }
 	};
 
@@ -90,13 +90,13 @@ namespace quickhull {
 
 		// Given a list of half edges, try to rearrange them so that they form a loop. Return true on success.
 		bool reorderHorizonEdges(std::vector<size_t>& horizonEdges);
-		
+
 		// Find indices of extreme values (max x, min x, max y, min y, max z, min z) for the given point cloud
 		std::array<size_t,6> getExtremeValues();
-		
+
 		// Compute scale of the vertex data.
 		FloatType getScale(const std::array<size_t,6>& extremeValues);
-		
+
 		// Each face contains a unique pointer to a vector of indices. However, many - often most - faces do not have any points on the positive
 		// side of them especially at the the end of the iteration. When a face is removed from the mesh, its associated point vector, if such
 		// exists, is moved to the index vector pool, and when we need to add new faces with points on the positive side to the mesh,
@@ -104,16 +104,16 @@ namespace quickhull {
 		Pool<std::vector<size_t>> m_indexVectorPool;
 		inline std::unique_ptr<std::vector<size_t>> getIndexVectorFromPool();
 		inline void reclaimToIndexVectorPool(std::unique_ptr<std::vector<size_t>>& ptr);
-		
+
 		// Associates a point with a face if the point resides on the positive side of the plane. Returns true if the points was on the positive side.
 		inline bool addPointToFace(typename MeshBuilder<FloatType>::Face& f, size_t pointIndex);
-		
+
 		// This will update m_mesh from which we create the ConvexHull object that getConvexHull function returns
 		void createConvexHalfEdgeMesh();
-		
+
 		// Constructs the convex hull into a MeshBuilder object which can be converted to a ConvexHull or Mesh object
 		void buildMesh(const VertexDataSource<FloatType>& pointCloud, bool CCW, bool useOriginalIndices, FloatType eps);
-		
+
 		// The public getConvexHull functions will setup a VertexDataSource object and call this
 		ConvexHull<FloatType> getConvexHull(const VertexDataSource<FloatType>& pointCloud, bool CCW, bool useOriginalIndices, FloatType eps);
 	public:
@@ -128,7 +128,7 @@ namespace quickhull {
 											bool CCW,
 											bool useOriginalIndices,
 											FloatType eps = defaultEps<FloatType>());
-		
+
 		// Computes convex hull for a given point cloud.
 		// Params:
 		//   vertexData: pointer to the first 3D point of the point cloud
@@ -142,7 +142,7 @@ namespace quickhull {
 											bool CCW,
 											bool useOriginalIndices,
 											FloatType eps = defaultEps<FloatType>());
-		
+
 		// Computes convex hull for a given point cloud. This function assumes that the vertex data resides in memory
 		// in the following format: x_0,y_0,z_0,x_1,y_1,z_1,...
 		// Params:
@@ -157,7 +157,7 @@ namespace quickhull {
 											bool CCW,
 											bool useOriginalIndices,
 											FloatType eps = defaultEps<FloatType>());
-		
+
 		// Computes convex hull for a given point cloud. This function assumes that the vertex data resides in memory
 		// in the following format: x_0,y_0,z_0,x_1,y_1,z_1,...
 		// Params:
@@ -171,24 +171,24 @@ namespace quickhull {
 															size_t vertexCount,
 															bool CCW,
 															FloatType eps = defaultEps<FloatType>());
-		
+
 		// Get diagnostics about last generated convex hull
 		const DiagnosticsData& getDiagnostics() {
 			return m_diagnostics;
 		}
 	};
-	
+
 	/*
 	 * Inline function definitions
 	 */
-	
+
 	template<typename T>
 	std::unique_ptr<std::vector<size_t>> QuickHull<T>::getIndexVectorFromPool() {
 		auto r = std::move(m_indexVectorPool.get());
 		r->clear();
 		return r;
 	}
-	
+
 	template<typename T>
 	void QuickHull<T>::reclaimToIndexVectorPool(std::unique_ptr<std::vector<size_t>>& ptr) {
 		const size_t oldSize = ptr->size();
