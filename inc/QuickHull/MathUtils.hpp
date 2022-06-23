@@ -3,6 +3,7 @@
 #define QuickHull_MathUtils_hpp
 
 #include "Structs/Vector3.hpp"
+#include "Structs/Plane.hpp"
 #include "Structs/Ray.hpp"
 
 namespace quickhull {

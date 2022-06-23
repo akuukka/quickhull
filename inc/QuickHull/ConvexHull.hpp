@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <memory>
+#include <string>
 
 namespace quickhull {
 
