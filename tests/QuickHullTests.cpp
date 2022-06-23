@@ -1,43 +1,43 @@
-#include "../QuickHull.hpp"
-#include "../MathUtils.hpp"
+#include "QuickHull/QuickHull.hpp"
+#include "QuickHull/MathUtils.hpp"
 #include <iostream>
 #include <random>
 #include <cassert>
 #include <chrono>
 
 namespace quickhull {
-	
+
 	namespace tests {
-		
+
 		using FloatType = float;
 		using vec3 = Vector3<FloatType>;
-		
+
 		// Setup RNG
 		static std::mt19937 rng;
 		static std::uniform_real_distribution<> dist(0,1);
-		
+
 		FloatType rnd(FloatType from, FloatType to) {
 			return from + (FloatType)dist(rng)*(to-from);
 		};
-		
+
 		static void assertSameValue(FloatType a, FloatType b) {
 			assert(std::abs(a-b)<0.0001f);
 		}
-		
+
 		static void testVector3() {
 			typedef Vector3<FloatType> vec3;
 			vec3 a(1,0,0);
 			vec3 b(1,0,0);
-			
+
 			vec3 c = a.projection(b);
 			assert( (c-a).getLength()<0.00001f);
-			
+
 			a = vec3(1,1,0);
 			b = vec3(1,3,0);
 			c = b.projection(a);
 			assert( (c-vec3(2,2,0)).getLength()<0.00001f);
 		}
-		
+
 		template <typename T>
 		static std::vector<Vector3<T>> createSphere(T radius, size_t M, Vector3<T> offset = Vector3<T>(0,0,0)) {
 			std::vector<Vector3<T>> pc;
@@ -55,7 +55,7 @@ namespace quickhull {
 			}
 			return pc;
 		}
-		
+
 		static void sphereTest() {
 			QuickHull<FloatType> qh;
 			FloatType y = 1;
@@ -68,7 +68,7 @@ namespace quickhull {
 					break;
 				}
 			}
-			
+
 			// Test worst case scenario: more and more points on the unit sphere. All points should be part of the convex hull, as long as we can make epsilon smaller without
 			// running out of numerical accuracy.
 			size_t i =  1;
@@ -93,7 +93,7 @@ namespace quickhull {
 				}
 			}
 		}
-		
+
 		static void testPlanarCase() {
 			QuickHull<FloatType> qh;
 			std::vector<vec3> pc;
@@ -105,10 +105,10 @@ namespace quickhull {
 			assert(hull.getIndexBuffer().size()==12);
 			assert(hull.getVertexBuffer().size()==4);
 		}
-		
+
 		static void testHalfEdgeOutput() {
-			QuickHull<FloatType> qh;            
-			
+			QuickHull<FloatType> qh;
+
 			// 8 corner vertices of a cube + tons of vertices inside.
 			// Output should be a half edge mesh with 12 faces (6 cube faces with 2 triangles
 			// per face) and 36 half edges (3 half edges per face).
@@ -132,7 +132,7 @@ namespace quickhull {
 				assert(next == f.m_halfEdgeIndex);
 			}
 		}
-		
+
 		static void testPlanes() {
 			Vector3<FloatType> N(1,0,0);
 			Vector3<FloatType> p(2,0,0);
@@ -193,12 +193,12 @@ namespace quickhull {
 			std::vector<vec3> pc;
 			QuickHull<FloatType> qh;
 			ConvexHull<FloatType> hull;
-			
+
 			// Seed RNG using Unix time
 			std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 			auto seed = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 			rng.seed((unsigned int)seed);
-			
+
 			// Test 1 : Put N points inside unit cube. Result mesh must have exactly 8 vertices because the convex hull is the unit cube.
 			pc.clear();
 			for (int i=0;i<8;i++) {
@@ -218,13 +218,13 @@ namespace quickhull {
 			assert(hull2.getIndexBuffer().size()==hull.getIndexBuffer().size());
 			auto hull3 = std::move(hull);
 			assert(hull.getIndexBuffer().size()==0);
-			
+
 			// Test 1.1 : Same test, but using the original indices.
 			hull = qh.getConvexHull(pc,true,true);
 			assert(hull.getIndexBuffer().size()==3*2*6);
 			assert(hull.getVertexBuffer().size()==pc.size());
 			assert(&(hull.getVertexBuffer()[0])==&(pc[0]));
-			
+
 			// Test 2 : random N points from the boundary of unit sphere. Result mesh must have exactly N points.
 			pc = createSphere<FloatType>(1, 50);
 			hull = qh.getConvexHull(pc,true,false);
@@ -238,7 +238,7 @@ namespace quickhull {
 			}
 			hull = qh.getConvexHull(pc,true,false);
 			assert(pc.size()/2 == hull.getVertexBuffer().size());
-			
+
 			// Test 2.1 : Multiply x components of the unit sphere vectors by a huge number => essentially we get a line
 			const FloatType mul = 2*2*2;
 			while (true) {
@@ -250,7 +250,7 @@ namespace quickhull {
 					break;
 				}
 			}
-			
+
 			// Test 3: 0D
 			pc.clear();
 			vec3 centerPoint(2,2,2);
@@ -261,10 +261,10 @@ namespace quickhull {
 			}
 			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getIndexBuffer().size()==12);
-			
+
 			// Test 4: 2d degenerate case
 			testPlanarCase();
-			
+
 			// Test 5: first a planar circle, then make a cylinder out of it
 			pc.clear();
 			for (size_t i=0;i<N;i++) {
@@ -272,7 +272,7 @@ namespace quickhull {
 				pc.emplace_back(std::cos(alpha),0,std::sin(alpha));
 			}
 			hull = qh.getConvexHull(pc,true,false);
-			
+
 			assert(hull.getVertexBuffer().size() == pc.size());
 			for (size_t i=0;i<N;i++) {
 				pc.push_back(pc[i] + vec3(0,1,0));
@@ -280,7 +280,7 @@ namespace quickhull {
 			hull = qh.getConvexHull(pc,true,false);
 			assert(hull.getVertexBuffer().size() == pc.size());
 			assert(hull.getIndexBuffer().size()/3 == pc.size()*2-4);
-			
+
 			// Test 6
 			for (int x=0;;x++) {
 				pc.clear();
@@ -297,7 +297,7 @@ namespace quickhull {
 					break;
 				}
 			}
-			
+
 			// Other tests
 			testVertexBufferAddress();
 			testNormals();
@@ -308,6 +308,6 @@ namespace quickhull {
 			std::cout << "QuickHull tests succesfully passed." << std::endl;
 			return 0;
 		}
-		
+
 	}
 }

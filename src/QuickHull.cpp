@@ -1,53 +1,53 @@
-#include "QuickHull.hpp"
-#include "MathUtils.hpp"
 #include <cmath>
 #include <cassert>
 #include <iostream>
 #include <algorithm>
 #include <limits>
-#include "Structs/Mesh.hpp"
+#include "QuickHull/QuickHull.hpp"
+#include "QuickHull/MathUtils.hpp"
+#include "QuickHull/Structs/Mesh.hpp"
 
 namespace quickhull {
 
 	template<>
-	float defaultEps() { 
+	float defaultEps() {
 		return 0.0001f;
 	}
-	
+
 	template<>
 	double defaultEps() {
-		return 0.0000001; 
+		return 0.0000001;
 	}
-	
+
 	/*
 	 * Implementation of the algorithm
 	 */
-	
+
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::getConvexHull(const std::vector<Vector3<T>>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
 		VertexDataSource<T> vertexDataSource(pointCloud);
 		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
-	
+
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::getConvexHull(const Vector3<T>* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T epsilon) {
 		VertexDataSource<T> vertexDataSource(vertexData,vertexCount);
 		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
-	
+
 	template<typename T>
 	ConvexHull<T> QuickHull<T>::getConvexHull(const T* vertexData, size_t vertexCount, bool CCW, bool useOriginalIndices, T epsilon) {
 		VertexDataSource<T> vertexDataSource((const vec3*)vertexData,vertexCount);
 		return getConvexHull(vertexDataSource,CCW,useOriginalIndices,epsilon);
 	}
-	
+
 	template<typename FloatType>
 	HalfEdgeMesh<FloatType, size_t> QuickHull<FloatType>::getConvexHullAsMesh(const FloatType* vertexData, size_t vertexCount, bool CCW, FloatType epsilon) {
 		VertexDataSource<FloatType> vertexDataSource((const vec3*)vertexData,vertexCount);
 		buildMesh(vertexDataSource, CCW, false, epsilon);
 		return HalfEdgeMesh<FloatType, size_t>(m_mesh, m_vertexData);
 	}
-	
+
 	template<typename T>
 	void QuickHull<T>::buildMesh(const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices, T epsilon) {
 		// CCW is unused for now
@@ -60,18 +60,18 @@ namespace quickhull {
 			return;
 		}
 		m_vertexData = pointCloud;
-		
+
 		// Very first: find extreme values and use them to compute the scale of the point cloud.
 		m_extremeValues = getExtremeValues();
 		m_scale = getScale(m_extremeValues);
-		
+
 		// Epsilon we use depends on the scale
 		m_epsilon = epsilon*m_scale;
 		m_epsilonSquared = m_epsilon*m_epsilon;
-		
+
 		// Reset diagnostics
 		m_diagnostics = DiagnosticsData();
-		
+
 		m_planar = false; // The planar case happens when all the points appear to lie on a two dimensional subspace of R^3.
 		createConvexHalfEdgeMesh();
 		if (m_planar) {
@@ -97,7 +97,7 @@ namespace quickhull {
 		m_visibleFaces.clear();
 		m_horizonEdges.clear();
 		m_possiblyVisibleFaces.clear();
-		
+
 		// Compute base tetrahedron
 		setupInitialTetrahedron();
 		assert(m_mesh.m_faces.size()==4);
@@ -121,10 +121,10 @@ namespace quickhull {
 				// issue on 64 bit machines.
 				iter = 0;
 			}
-			
+
 			const size_t topFaceIndex = m_faceList.front();
 			m_faceList.pop_front();
-			
+
 			auto& tf = m_mesh.m_faces[topFaceIndex];
 			tf.m_inFaceStack = 0;
 
@@ -132,7 +132,7 @@ namespace quickhull {
 			if (!tf.m_pointsOnPositiveSide || tf.isDisabled()) {
 				continue;
 			}
-			
+
 			// Pick the most distant point to this triangle plane as the point to which we extrude
 			const vec3& activePoint = m_vertexData[tf.m_mostDistantPoint];
 			const size_t activePointIndex = tf.m_mostDistantPoint;
@@ -147,7 +147,7 @@ namespace quickhull {
 				m_possiblyVisibleFaces.pop_back();
 				auto& pvf = m_mesh.m_faces[faceData.m_faceIndex];
 				assert(!pvf.isDisabled());
-				
+
 				if (pvf.m_visibilityCheckedOnIteration == iter) {
 					if (pvf.m_isVisibleFaceOnCurrentIteration) {
 						continue;
@@ -230,7 +230,7 @@ namespace quickhull {
 					m_newHalfEdgeIndices.push_back(m_mesh.addHalfEdge());
 				}
 			}
-			
+
 			// Create new faces using the edgeloop
 			for (size_t i = 0; i < horizonEdgeCount; i++) {
 				const size_t AB = m_horizonEdges[i];
@@ -297,11 +297,11 @@ namespace quickhull {
 				}
 			}
 		}
-		
+
 		// Cleanup
 		m_indexVectorPool.clear();
 	}
-	
+
 	/*
 	 * Private helper functions
 	 */
@@ -362,7 +362,7 @@ namespace quickhull {
 		assert(m_mesh.m_halfEdges[ horizonEdges[horizonEdges.size()-1] ].m_endVertex == m_mesh.m_halfEdges[ m_mesh.m_halfEdges[horizonEdges[0]].m_opp ].m_endVertex);
 		return true;
 	}
-	
+
 	template <typename T>
 	T QuickHull<T>::getScale(const std::array<size_t,6>& extremeValues) {
 		T s = 0;
@@ -380,7 +380,7 @@ namespace quickhull {
 	template<typename T>
 	void QuickHull<T>::setupInitialTetrahedron() {
 		const size_t vertexCount = m_vertexData.size();
-		
+
 		// If we have at most 4 points, just return a degenerate tetrahedron:
 		if (vertexCount <= 4) {
 			size_t v[4] = {0,std::min((size_t)1,vertexCount-1),std::min((size_t)2,vertexCount-1),std::min((size_t)3,vertexCount-1)};
@@ -391,7 +391,7 @@ namespace quickhull {
 			}
 			return m_mesh.setup(v[0],v[1],v[2],v[3]);
 		}
-		
+
 		// Find two most distant extreme points.
 		T maxD = m_epsilonSquared;
 		std::pair<size_t,size_t> selectedPoints;
@@ -409,7 +409,7 @@ namespace quickhull {
 			return m_mesh.setup(0,std::min((size_t)1,vertexCount-1),std::min((size_t)2,vertexCount-1),std::min((size_t)3,vertexCount-1));
 		}
 		assert(selectedPoints.first != selectedPoints.second);
-		
+
 		// Find the most distant point to the line between the two chosen extreme points.
 		const Ray<T> r(m_vertexData[selectedPoints.first], (m_vertexData[selectedPoints.second] - m_vertexData[selectedPoints.first]));
 		maxD = m_epsilonSquared;
@@ -440,7 +440,7 @@ namespace quickhull {
 		assert(selectedPoints.first != maxI && selectedPoints.second != maxI);
 		std::array<size_t,3> baseTriangle{selectedPoints.first, selectedPoints.second, maxI};
 		const Vector3<T> baseTriangleVertices[]={ m_vertexData[baseTriangle[0]], m_vertexData[baseTriangle[1]],  m_vertexData[baseTriangle[2]] };
-		
+
 		// Next step is to find the 4th vertex of the tetrahedron. We naturally choose the point farthest away from the triangle plane.
 		maxD=m_epsilon;
 		maxI=0;
@@ -492,7 +492,7 @@ namespace quickhull {
 			}
 		}
 	}
-	
+
 	/*
 	 * Explicit template specifications for float and double
 	 */
@@ -500,4 +500,3 @@ namespace quickhull {
 	template class QuickHull<float>;
 	template class QuickHull<double>;
 }
-

@@ -18,7 +18,7 @@ namespace quickhull {
 		std::vector<size_t> m_indices;
 	public:
 		ConvexHull() {}
-		
+
 		// Copy constructor
 		ConvexHull(const ConvexHull& o) {
 			m_indices = o.m_indices;
@@ -30,7 +30,7 @@ namespace quickhull {
 				m_vertices = o.m_vertices;
 			}
 		}
-		
+
 		ConvexHull& operator=(const ConvexHull& o) {
 			if (&o == this) {
 				return *this;
@@ -45,7 +45,7 @@ namespace quickhull {
 			}
 			return *this;
 		}
-		
+
 		ConvexHull(ConvexHull&& o) {
 			m_indices = std::move(o.m_indices);
 			if (o.m_optimizedVertexBuffer) {
@@ -57,7 +57,7 @@ namespace quickhull {
 				m_vertices = o.m_vertices;
 			}
 		}
-		
+
 		ConvexHull& operator=(ConvexHull&& o) {
 			if (&o == this) {
 				return *this;
@@ -73,13 +73,13 @@ namespace quickhull {
 			}
 			return *this;
 		}
-		
+
 		// Construct vertex and index buffers from half edge mesh and pointcloud
 		ConvexHull(const MeshBuilder<T>& mesh, const VertexDataSource<T>& pointCloud, bool CCW, bool useOriginalIndices) {
 			if (!useOriginalIndices) {
 				m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>());
 			}
-			
+
 			std::vector<bool> faceProcessed(mesh.m_faces.size(),false);
 			std::vector<size_t> faceStack;
 			std::unordered_map<size_t,size_t> vertexIndexMapping; // Map vertex indices from original point cloud to the new mesh vertex indices
@@ -133,7 +133,7 @@ namespace quickhull {
 					m_indices.push_back(vertices[2 - iCCW]);
 				}
 			}
-			
+
 			if (!useOriginalIndices) {
 				m_vertices = VertexDataSource<T>(*m_optimizedVertexBuffer);
 			}
@@ -153,11 +153,11 @@ namespace quickhull {
 		VertexDataSource<T>& getVertexBuffer() {
 			return m_vertices;
 		}
-		
+
 		const VertexDataSource<T>& getVertexBuffer() const {
 			return m_vertices;
 		}
-		
+
 		// Export the mesh to a Waveform OBJ file
 		void writeWaveformOBJ(const std::string& filename, const std::string& objectName = "quickhull") const
 		{
