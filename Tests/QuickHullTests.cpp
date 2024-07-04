@@ -141,10 +141,13 @@ namespace quickhull {
 		}
 		
 		static void testPlanes() {
-			Vector3<FloatType> N(1,0,0);
-			Vector3<FloatType> p(2,0,0);
-			Plane<FloatType> P(N,p);
-			auto dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(3,0,0), P);
+			vec3 N(1, 0, 0);
+			vec3 p(2, 0, 0);
+			Plane<FloatType> P(N, p);
+			VERIFY(P.isPointOnPositiveSide(p));
+			VERIFY(P.isPointOnPositiveSide(vec3(3, 0, 0)));
+			VERIFY(!P.isPointOnPositiveSide(vec3(1, 0, 0)));
+			FloatType dist = mathutils::getSignedDistanceToPlane(vec3(3,0,0), P);
 			CHECK_CLOSE(dist,1);
 			dist = mathutils::getSignedDistanceToPlane(Vector3<FloatType>(1,0,0), P);
 			CHECK_CLOSE(dist,-1);
