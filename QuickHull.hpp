@@ -75,6 +75,7 @@ namespace quickhull {
 		std::vector< std::unique_ptr<std::vector<size_t>> > m_disabledFacePointVectors;
 		std::vector<size_t> m_visibleFaces;
 		std::vector<size_t> m_horizonEdges;
+    std::vector<size_t> tempPoints;
 		struct FaceData {
 			size_t m_faceIndex;
 			size_t m_enteredFromHalfEdge; // If the face turns out not to be visible,
@@ -125,6 +126,7 @@ namespace quickhull {
 		// The public getConvexHull functions will setup a VertexDataSource object and call this
 		ConvexHull<FloatType> getConvexHull(const VertexDataSource<FloatType>& pointCloud,
 											bool CCW, bool useOriginalIndices, FloatType eps);
+    bool isMeshConvex(const std::vector<size_t>& newFaces);
 	public:
 		// Computes convex hull for a given point cloud.
 		// Params:
@@ -194,11 +196,26 @@ namespace quickhull {
 	template<typename T>
 	bool QuickHull<T>::addPointToFace(typename MeshBuilder<T>::Face& f, size_t pointIndex) {
 		const T D = mathutils::getSignedDistanceToPlane(m_vertexData[ pointIndex ],f.m_P);
+    // if (D==0)
+    // {
+    //   std::cout << "0point" << m_vertexData[pointIndex].x << " " << m_vertexData[pointIndex].y << " " << m_vertexData[pointIndex].z << std::endl;
+    // }
+    // if (D>m_epsilon && D*D > m_epsilonSquared*f.m_P.m_sqrNLength) {
 		if (D>0 && D*D > m_epsilonSquared*f.m_P.m_sqrNLength) {
+    // if (D>m_epsilon) {
+      // std::cout << D << " " << m_epsilonSquared*f.m_P.m_sqrNLength << std::endl;
+      // std::cout << "Point" << m_vertexData[pointIndex].x << " " << m_vertexData[pointIndex].y << " " << m_vertexData[pointIndex].z << std::endl;
 			if (!f.m_pointsOnPositiveSide) {
 				f.m_pointsOnPositiveSide = std::move(getIndexVectorFromPool());
 			}
 			f.m_pointsOnPositiveSide->push_back( pointIndex );
+      // if (D == f.m_mostDistantPointDist) {
+      //   std::cout << "Check";
+      //   std::cout << "Prior" << m_vertexData[f.m_mostDistantPoint].x << " " << m_vertexData[f.m_mostDistantPoint].y << " " << m_vertexData[f.m_mostDistantPoint].z << std::endl;
+      //   std::cout << "New" << m_vertexData[pointIndex].x << " " << m_vertexData[pointIndex].y << " " << m_vertexData[pointIndex].z << std::endl;
+      //   std::cout << "Normal" << f.m_P.m_N.x << " " << f.m_P.m_N.y << " " << f.m_P.m_N.z << std::endl;
+
+      // }
 			if (D > f.m_mostDistantPointDist) {
 				f.m_mostDistantPointDist = D;
 				f.m_mostDistantPoint = pointIndex;

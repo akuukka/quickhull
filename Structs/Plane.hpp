@@ -15,7 +15,7 @@ namespace quickhull {
 		
 		// Normal length squared
 		T m_sqrNLength;
-
+    Vector3<T> errorNormal;
 		bool isPointOnPositiveSide(const Vector3<T>& Q) const {
 			T d = m_N.dotProduct(Q)+m_D;
 			if (d>=0) return true;
