@@ -92,6 +92,31 @@ namespace quickhull {
 		return ConvexHull<T>(m_mesh,m_vertexData, CCW, useOriginalIndices);
 	}
 
+  // Check if the mesh remains convex after adding new faces
+  template<typename T>
+    bool QuickHull<T>::isMeshConvex(const std::vector<size_t>& newFaces) {
+      for (const size_t& faceIndex : newFaces) {
+        const auto& face = m_mesh.m_faces[faceIndex];
+        bool positive = false;
+        bool negative = false;
+        for (auto i : tempPoints) {
+          Vector3 vertex = m_vertexData[i];
+          double distance = face.m_P.m_N.dotProduct(vertex) + face.m_P.m_D;
+          if (distance > m_epsilon) {
+              positive = true;
+          } else if (distance < -m_epsilon) {
+              negative = true;
+          }
+
+          // If we find both positive and negative distances, the polyhedron is not convex
+          if (positive && negative) {
+              return false;
+          }
+        }
+    }
+    return true;
+    }
+
 	template<typename T>
 	void QuickHull<T>::createConvexHalfEdgeMesh() {
 		m_visibleFaces.clear();
@@ -114,6 +139,7 @@ namespace quickhull {
 
 		// Process faces until the face list is empty.
 		size_t iter = 0;
+    int incorrect_count=0;
 		while (!m_faceList.empty()) {
 			iter++;
 			if (iter == std::numeric_limits<size_t>::max()) {
@@ -134,8 +160,16 @@ namespace quickhull {
 			}
 			
 			// Pick the most distant point to this triangle plane as the point to which we extrude
+      // int breakFlag=0;
 			const vec3& activePoint = m_vertexData[tf.m_mostDistantPoint];
+      // std::cout << "Active Point" << activePoint.x << " " << activePoint.y << " " << activePoint.z << std::endl;
 			const size_t activePointIndex = tf.m_mostDistantPoint;
+      // std::cout << activePointIndex << std::endl;
+      // if (activePointIndex==0)
+      // {
+      //   breakFlag=1;
+      // }
+      tempPoints.push_back(activePointIndex);
 
 			// Find out the faces that have our active point on their positive side (these are the "visible faces"). The face on top of the stack of course is one of them. At the same time, we create a list of horizon edges.
 			m_horizonEdges.clear();
@@ -158,6 +192,9 @@ namespace quickhull {
 					pvf.m_visibilityCheckedOnIteration = iter;
 					const T d = P.m_N.dotProduct(activePoint)+P.m_D;
 					if (d>0) {
+          // if (d>m_epsilon && d*d > m_epsilonSquared*P.m_sqrNLength) {
+          // if (d>0 && d*d > m_epsilonSquared*P.m_sqrNLength) {
+          // if (d>m_epsilon) {
 						pvf.m_isVisibleFaceOnCurrentIteration = 1;
 						pvf.m_horizonEdgesOnCurrentIteration = 0;
 						m_visibleFaces.push_back(faceData.m_faceIndex);
@@ -240,7 +277,9 @@ namespace quickhull {
 				A = horizonEdgeVertexIndices[0];
 				B = horizonEdgeVertexIndices[1];
 				C = activePointIndex;
-
+        // std::cout << "PtA" << m_vertexData[A].x << " " << m_vertexData[A].y << " " << m_vertexData[A].z << std::endl;
+        // std::cout << "PtB" << m_vertexData[B].x << " " << m_vertexData[B].y << " " << m_vertexData[B].z << std::endl;
+        // std::cout << "PtC" << m_vertexData[C].x << " " << m_vertexData[C].y << " " << m_vertexData[C].z << std::endl;
 				const size_t newFaceIndex = m_mesh.addFace();
 				m_newFaceIndices.push_back(newFaceIndex);
 
@@ -262,6 +301,7 @@ namespace quickhull {
 
 				const Vector3<T> planeNormal = mathutils::getTriangleNormal(m_vertexData[A],m_vertexData[B],activePoint);
 				newFace.m_P = Plane<T>(planeNormal,activePoint);
+        // std::cout << "N" << planeNormal.x << " " << planeNormal.y << " " << planeNormal.z << std::endl;
 				newFace.m_he = AB;
 
 				m_mesh.m_halfEdges[CA].m_opp = m_newHalfEdgeIndices[i>0 ? i*2-1 : 2*horizonEdgeCount-1];
@@ -282,6 +322,9 @@ namespace quickhull {
 					}
 				}
 				// The points are no longer needed: we can move them to the vector pool for reuse.
+        // for (auto disabledPt : *disabledPoints) {
+        //   std::cout << "Disabled Point" << m_vertexData[disabledPt].x << " " << m_vertexData[disabledPt].y << " " << m_vertexData[disabledPt].z << std::endl;
+        // }
 				reclaimToIndexVectorPool(disabledPoints);
 			}
 
@@ -296,8 +339,27 @@ namespace quickhull {
 					}
 				}
 			}
+      // if (isMeshConvex(m_newFaceIndices))
+			// {
+      //   // if (breakFlag==1)
+      //   // {
+      //   //   m_indexVectorPool.clear();
+      //   //   break;
+      //   // }
+			// 	// std::cout << "YAY\n";
+			// }
+			// else
+			// {
+      //   incorrect_count+=1;
+			// 	// std::cout << "OOP\n";
+      //   // m_indexVectorPool.clear();
+      //   // break;
+			// }
 		}
-		
+		if (!isMeshConvex(m_newFaceIndices))
+    {
+      std::cout << "Invalid Output" << "\n";
+    }
 		// Cleanup
 		m_indexVectorPool.clear();
 	}
@@ -389,6 +451,10 @@ namespace quickhull {
 			if (trianglePlane.isPointOnPositiveSide(m_vertexData[v[3]])) {
 				std::swap(v[0],v[1]);
 			}
+      tempPoints.push_back(v[0]);
+      tempPoints.push_back(v[1]);
+      tempPoints.push_back(v[2]);
+      tempPoints.push_back(v[3]);
 			return m_mesh.setup(v[0],v[1],v[2],v[3]);
 		}
 		
@@ -420,6 +486,7 @@ namespace quickhull {
 			if (distToRay > maxD) {
 				maxD=distToRay;
 				maxI=i;
+        // Maybe here
 			}
 		}
 		if (maxD == m_epsilonSquared) {
@@ -472,7 +539,15 @@ namespace quickhull {
 		}
 
 		// Create a tetrahedron half edge mesh and compute planes defined by each triangle
-		m_mesh.setup(baseTriangle[0],baseTriangle[1],baseTriangle[2],maxI);
+    // std::cout << "Active Point Base" << m_vertexData[baseTriangle[0]].x << " " << m_vertexData[baseTriangle[0]].y << " " << m_vertexData[baseTriangle[0]].z << std::endl;
+    // std::cout << "Active Point Base" << m_vertexData[baseTriangle[1]].x << " " << m_vertexData[baseTriangle[1]].y << " " << m_vertexData[baseTriangle[1]].z << std::endl;
+		// std::cout << "Active Point Base" << m_vertexData[baseTriangle[2]].x << " " << m_vertexData[baseTriangle[2]].y << " " << m_vertexData[baseTriangle[2]].z << std::endl;
+    // std::cout << "Active Point Base" << m_vertexData[maxI].x << " " << m_vertexData[maxI].y << " " << m_vertexData[maxI].z << std::endl;
+    tempPoints.push_back(baseTriangle[0]);
+		tempPoints.push_back(baseTriangle[1]);
+		tempPoints.push_back(baseTriangle[2]);
+		tempPoints.push_back(maxI);
+    m_mesh.setup(baseTriangle[0],baseTriangle[1],baseTriangle[2],maxI);
 		for (auto& f : m_mesh.m_faces) {
 			auto v = m_mesh.getVertexIndicesOfFace(f);
 			const Vector3<T>& va = m_vertexData[v[0]];
@@ -481,6 +556,10 @@ namespace quickhull {
 			const Vector3<T> N1 = mathutils::getTriangleNormal(va, vb, vc);
 			const Plane<T> plane(N1,va);
 			f.m_P = plane;
+      // std::cout << "Pt1" << va.x << " " << va.y << " " << va.z << std::endl;
+      // std::cout << "Pt2" << vb.x << " " << vb.y << " " << vb.z << std::endl;
+      // std::cout << "Pt3" << vc.x << " " << vc.y << " " << vc.z << std::endl;
+      // std::cout << "N" << N1.x << " " << N1.y << " " << N1.z << std::endl;
 		}
 
 		// Finally we assign a face for each vertex outside the tetrahedron (vertices inside the tetrahedron have no role anymore)

@@ -21,7 +21,8 @@ namespace quickhull {
 		// (divide by N.getNormalized() to get actual Euclidian distance).
 		template <typename T>
 		inline T getSignedDistanceToPlane(const Vector3<T>& v, const Plane<T>& p) {
-			return p.m_N.dotProduct(v) + p.m_D;
+      return p.m_N.dotProduct(v) + p.m_D;
+			// return (p.m_N.getNormalized().dotProduct(v) + p.m_D);
 		}
 		
 		template <typename T>
@@ -36,7 +37,9 @@ namespace quickhull {
 			T px = y * rhsz - z * rhsy ;
 			T py = z * rhsx - x * rhsz ;
 			T pz = x * rhsy - y * rhsx ;
-			return Vector3<T>(px,py,pz);
+      // errorNormal = Vector3<T>(std::abs(y*rhsz)+std::abs(z*rhsy),std::abs(z*rhsx)+std::abs(x*rhsz),std::abs(x*rhsy)+std::abs(y*rhsx));
+			// return Vector3<T>(px,py,pz);
+      return Vector3<T>(px,py,pz).getNormalized();
 		}
 		
 		
